@@ -1,111 +1,190 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 0 0% 99%;
-    --foreground: 224 71.4% 4.1%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --radius: 1rem;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-gray-200/80;
-  }
   body {
-    @apply bg-[#FAF8F5] text-gray-900 antialiased selection:bg-brand-500 selection:text-white;
+    @apply bg-obsidian-deep text-silver-100 antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(245, 166, 35, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 90% 80%, rgba(245, 166, 35, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+    background-attachment: fixed;
   }
+
+  * { @apply border-silver-800; }
 }
 
-/* 🎨 Ultra-Modern Glassmorphism & Effects */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+@layer components {
+  /* 🥇 Gold Gradient Text */
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #FFD24D 0%, #F5A623 50%, #D4891A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* 🥈 Silver Gradient Text */
+  .text-silver-gradient {
+    background: linear-gradient(135deg, #FAFAFA 0%, #A1A1AA 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* 💎 Premium Glass Card */
+  .glass-dark {
+    background: linear-gradient(135deg, rgba(39, 39, 42, 0.6) 0%, rgba(24, 24, 27, 0.8) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(245, 166, 35, 0.15);
+    box-shadow: 
+      0 20px 60px -20px rgba(0, 0, 0, 0.8),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-gold {
+    background: linear-gradient(135deg, rgba(245, 166, 35, 0.1) 0%, rgba(245, 166, 35, 0.05) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(245, 166, 35, 0.3);
+  }
+
+  /* ✨ Luxury Button */
+  .btn-gold {
+    background: linear-gradient(135deg, #FFD24D 0%, #F5A623 50%, #D4891A 100%);
+    color: #0A0A0A;
+    font-weight: 800;
+    box-shadow: 
+      0 4px 20px rgba(245, 166, 35, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 8px 30px rgba(245, 166, 35, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .btn-gold:active { transform: translateY(0); }
+
+  .btn-silver {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    color: #FAFAFA;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s;
+  }
+  .btn-silver:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border-color: rgba(245, 166, 35, 0.4);
+  }
+
+  /* 💫 Premium Input */
+  .input-premium {
+    background: rgba(24, 24, 27, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #FAFAFA;
+    transition: all 0.3s;
+  }
+  .input-premium:focus {
+    outline: none;
+    border-color: rgba(245, 166, 35, 0.5);
+    box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.1);
+    background: rgba(24, 24, 27, 0.8);
+  }
+  .input-premium::placeholder { color: rgba(161, 161, 170, 0.5); }
+
+  /* 🏆 Deal Card */
+  .card-luxury {
+    background: linear-gradient(135deg, rgba(39, 39, 42, 0.4) 0%, rgba(10, 10, 10, 0.6) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    position: relative;
+  }
+  .card-luxury::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(245, 166, 35, 0.5), transparent);
+  }
+  .card-luxury:hover {
+    transform: translateY(-6px);
+    border-color: rgba(245, 166, 35, 0.3);
+    box-shadow: 
+      0 25px 60px -15px rgba(0, 0, 0, 0.7),
+      0 0 40px rgba(245, 166, 35, 0.1);
+  }
+
+  /* 🌟 Shimmer Loading */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(39, 39, 42, 0.4) 0%,
+      rgba(245, 166, 35, 0.1) 50%,
+      rgba(39, 39, 42, 0.4) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* 🎖️ Status Badges */
+  .badge-gold {
+    background: linear-gradient(135deg, rgba(245, 166, 35, 0.2), rgba(212, 137, 26, 0.1));
+    border: 1px solid rgba(245, 166, 35, 0.4);
+    color: #FFD24D;
+  }
+  .badge-silver {
+    background: linear-gradient(135deg, rgba(161, 161, 170, 0.15), rgba(113, 113, 122, 0.1));
+    border: 1px solid rgba(161, 161, 170, 0.3);
+    color: #D4D4D8;
+  }
+  .badge-success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1));
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34D399;
+  }
+  .badge-danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #F87171;
+  }
+
+  /* 🏷️ Platform Pills */
+  .platform-amazon { background: linear-gradient(135deg, rgba(255, 153, 0, 0.2), rgba(255, 153, 0, 0.08)); border: 1px solid rgba(255, 153, 0, 0.4); color: #FFB84D; }
+  .platform-flipkart { background: linear-gradient(135deg, rgba(40, 116, 240, 0.2), rgba(40, 116, 240, 0.08)); border: 1px solid rgba(40, 116, 240, 0.4); color: #60A5FA; }
+  .platform-myntra { background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.08)); border: 1px solid rgba(236, 72, 153, 0.4); color: #F472B6; }
+
+  /* 🚀 Sidebar Link */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-silver-400 transition-all duration-200;
+  }
+  .sidebar-link:hover {
+    @apply text-gold-400 bg-gold-500/5;
+  }
+  .sidebar-link.active {
+    background: linear-gradient(135deg, rgba(245, 166, 35, 0.15), rgba(245, 166, 35, 0.05));
+    border-left: 3px solid #F5A623;
+    @apply text-gold-400;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0A0A0A; }
+  ::-webkit-scrollbar-thumb { 
+    background: linear-gradient(180deg, #F5A623, #D4891A); 
+    border-radius: 10px; 
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(229, 231, 235, 0.6);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
-}
-
-.glow-brand {
-  box-shadow: 0 0 25px -5px rgba(37, 99, 235, 0.35);
-}
-
-.card-hover {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.card-hover:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.08);
-}
-
-/* 🌀 Custom Animations */
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-12px) rotate(2deg); }
-}
-
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.08); }
-}
-
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulseGlow 4s ease-in-out infinite;
-}
-
-.shimmer-skeleton {
-  position: relative;
-  overflow: hidden;
-}
-.shimmer-skeleton::after {
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.6) 20%,
-    rgba(255, 255, 255, 0.5) 60%,
-    rgba(255, 255, 255, 0)
-  );
-  animation: shimmer 2s infinite;
-  content: '';
-}
-
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+@layer utilities {
+  .text-balance { text-wrap: balance; }
 }
