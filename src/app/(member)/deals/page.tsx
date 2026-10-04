@@ -116,7 +116,7 @@ export default function DealsPage() {
       <div className="mb-8 overflow-x-auto no-scrollbar">
         <div className="flex gap-2 pb-2 min-w-max">
           {PLATFORMS.map((p) => {
-            const config = p === "ALL" ? { label: "All Deals", icon: "🔥", bgColor: "" } : getPlatformConfig(p);
+            const config = p === "ALL" ? { label: "All Deals", icon: "🔥", bgColor: "", color: "" } : getPlatformConfig(p);
             const isActive = activePlatform === p;
             return (
               <button
