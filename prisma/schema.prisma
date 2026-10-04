@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USERS (Members + Admin) ───
+model User {
+  id            String          @id @default(uuid())
+  name          String
+  email         String          @unique
+  phone         String          @unique
+  password      String
+  role          Role            @default(MEMBER)
+  upiId         String?
+  bankDetails   String?
+  isActive      Boolean         @default(true)
+  submissions   Submission[]
+  supportTickets SupportTicket[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+// ─── DEALS (Products posted by admin for review) ───
+model Deal {
+  id              String       @id @default(uuid())
+  title           String
+  description     String?
+  brandName       String
+  platform        Platform
+  productUrl      String                   // External link (Amazon/Flipkart)
+  imageUrl        String?
+  productPrice    Float
+  cashbackAmount  Float        @default(0)
+  searchKeyword   String?                  // Keyword to search on Amazon
+  sellerName      String?                  // Target seller name
+  totalSlots      Int          @default(50)
+  usedSlots       Int          @default(0)
+  instructions    String?                  // Step by step text
+  status          DealStatus   @default(ACTIVE)
+  isVisible       Boolean      @default(true)
+
+  // Two custom forms per deal
+  form1Id         String?
+  form1           FormTemplate? @relation("DealForm1", fields: [form1Id], references: [id])
+  form2Id         String?
+  form2           FormTemplate? @relation("DealForm2", fields: [form2Id], references: [id])
+
+  submissions     Submission[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+enum Platform {
+  AMAZON
+  FLIPKART
+  MYNTRA
+  MEESHO
+  NYKAA
+  AJIO
+  OTHER
+}
+
+enum DealStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+  COMPLETED
+}
+
+// ─── CUSTOM FORM TEMPLATES (Admin-editable like Google Forms) ───
+model FormTemplate {
+  id          String       @id @default(uuid())
+  name        String                       // "Order Details Form", "Review Proof Form"
+  description String?
+  fields      FormField[]
+  dealsAsForm1 Deal[]      @relation("DealForm1")
+  dealsAsForm2 Deal[]      @relation("DealForm2")
+  submissions FormSubmission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// ─── FORM FIELDS (Each field in a custom form) ───
+model FormField {
+  id            String       @id @default(uuid())
+  formId        String
+  form          FormTemplate @relation(fields: [formId], references: [id], onDelete: Cascade)
+  label         String                     // "Order ID", "Review Screenshot"
+  fieldType     FieldType                  // SHORT_ANSWER, FILE_UPLOAD, etc.
+  placeholder   String?                    // Placeholder text
+  helpText      String?                    // Helper text below field
+  isRequired    Boolean      @default(true)
+  options       String?                    // JSON array for dropdown options
+  sortOrder     Int          @default(0)   // Field ordering
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([formId, sortOrder])
+}
+
+enum FieldType {
+  SHORT_ANSWER
+  LONG_ANSWER
+  NUMBER
+  DATE
+  FILE_UPLOAD
+  DROPDOWN
+  EMAIL
+  PHONE
+  URL
+}
+
+// ─── SUBMISSIONS (When user fills Form 1 or Form 2 for a deal) ───
+model Submission {
+  id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  dealId          String
+  deal            Deal            @relation(fields: [dealId], references: [id])
+  formType        FormType                 // FORM1 (Order) or FORM2 (Review)
+  status          SubmissionStatus @default(PENDING)
+  adminNotes      String?
+  formData        FormSubmission[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+enum FormType {
+  FORM1
+  FORM2
+}
+
+enum SubmissionStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+// ─── INDIVIDUAL FIELD VALUES IN A SUBMISSION ───
+model FormSubmission {
+  id              String       @id @default(uuid())
+  submissionId    String
+  submission      Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  formTemplateId  String
+  formTemplate    FormTemplate @relation(fields: [formTemplateId], references: [id])
+  fieldLabel      String                   // Copy of field label at time of submission
+  fieldType       FieldType
+  value           String                   // Text value or file URL
+  createdAt       DateTime     @default(now())
+}
+
+// ─── SUPPORT TICKETS (Separate from forms) ───
+model SupportTicket {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  queryType     QueryType
+  subject       String
+  description   String
+  screenshotUrl String?
+  status        TicketStatus  @default(OPEN)
+  adminReply    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+enum QueryType {
+  DELIVERY
+  RETURN
+  REFUND
+  PRODUCT_QUESTION
+  PAYMENT
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
