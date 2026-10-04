@@ -18,8 +18,6 @@ export async function GET(request: NextRequest) {
         pendingSubmissions,
         approvedSubmissions,
         rejectedSubmissions,
-        spendAgg,
-        cashbackAgg,
         recentSubmissions,
       ] = await Promise.all([
         prisma.user.count({ where: { role: "MEMBER" } }),
@@ -28,14 +26,6 @@ export async function GET(request: NextRequest) {
         prisma.submission.count({ where: { status: "PENDING" } }),
         prisma.submission.count({ where: { status: "APPROVED" } }),
         prisma.submission.count({ where: { status: "REJECTED" } }),
-        prisma.submission.aggregate({
-          where: { formType: "FORM1" },
-          _sum: { id: undefined } as any, // We'll calculate from deals
-        }),
-        prisma.submission.aggregate({
-          where: { status: "APPROVED", formType: "FORM1" },
-          _sum: { id: undefined } as any,
-        }),
         prisma.submission.findMany({
           take: 10,
           orderBy: { createdAt: "desc" },
@@ -49,15 +39,16 @@ export async function GET(request: NextRequest) {
       // Calculate total reported spend from approved FORM1 submissions
       const spendSubmissions = await prisma.submission.findMany({
         where: { formType: "FORM1" },
-        include: { deal: { select: { productPrice: true } } },
+        include: { deal: { select: { productPrice: true, cashbackAmount: true } } },
       });
+
       const totalReportedSpend = spendSubmissions.reduce(
         (sum, s) => sum + s.deal.productPrice, 0
       );
 
       const approvedSubs = spendSubmissions.filter((s) => s.status === "APPROVED");
       const totalCashbackDue = approvedSubs.reduce(
-        (sum, s) => sum + s.deal.productPrice, 0
+        (sum, s) => sum + s.deal.productPrice + s.deal.cashbackAmount, 0
       );
 
       return NextResponse.json({
@@ -297,7 +288,6 @@ export async function POST(request: NextRequest) {
 
       if (id) {
         // UPDATE existing form
-        // Delete old fields and recreate
         await prisma.formField.deleteMany({ where: { formId: id } });
 
         const form = await prisma.formTemplate.update({
