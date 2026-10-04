@@ -1,41 +1,32 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: "ShopVault — Review Deal Platform",
-  description: "Submit your Amazon & Flipkart review deals, track orders, and earn cashback.",
+  title: "ShopVault — Premium Review Deals Portal",
+  description: "100% refund + bonus cashback on Amazon, Flipkart, Myntra deals. Verified campaigns, instant payouts.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-gray-50 antialiased`}>
+      <body className="min-h-screen bg-obsidian-deep font-sans antialiased">
         <Toaster
-          position="top-right"
+          position="top-center"
           toastOptions={{
-            duration: 4000,
+            duration: 3500,
             style: {
-              background: "#1e293b",
-              color: "#f8fafc",
-              borderRadius: "12px",
-              padding: "12px 20px",
+              background: "linear-gradient(135deg, #18181B, #27272A)",
+              color: "#FAFAFA",
+              border: "1px solid rgba(245, 166, 35, 0.3)",
+              borderRadius: "16px",
+              padding: "14px 20px",
               fontSize: "14px",
-              fontWeight: "500",
+              fontWeight: "600",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(245, 166, 35, 0.1)",
             },
-            success: {
-              iconTheme: { primary: "#22c55e", secondary: "#fff" },
-            },
-            error: {
-              iconTheme: { primary: "#ef4444", secondary: "#fff" },
-            },
+            success: { iconTheme: { primary: "#F5A623", secondary: "#0A0A0A" } },
+            error: { iconTheme: { primary: "#EF4444", secondary: "#FAFAFA" } },
           }}
         />
         {children}
