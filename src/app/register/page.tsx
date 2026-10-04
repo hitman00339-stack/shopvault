@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "link";
+import Link from "next/link";
 import toast from "react-hot-toast";
 
 export default function RegisterPage() {
@@ -69,7 +69,6 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden p-4">
       <div className="relative z-10 w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl shadow-lg mb-4 text-white font-bold text-2xl">
             SV
@@ -80,10 +79,8 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* Register Card */}
         <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-xl">
           <form onSubmit={handleRegister} className="space-y-4">
-            {/* Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-gray-700">Full Name *</label>
               <input
@@ -96,7 +93,6 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Email */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-gray-700">Email Address *</label>
               <input
@@ -109,7 +105,6 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Phone */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-gray-700">Phone Number *</label>
               <input
@@ -123,7 +118,6 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Password */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-gray-700">Password *</label>
               <input
@@ -136,7 +130,6 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -146,7 +139,6 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200" />
@@ -158,13 +150,12 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Login Link */}
-          <a
+          <Link
             href="/login"
             className="block w-full py-3 px-4 text-center text-sm font-semibold text-brand-600 border-2 border-brand-200 rounded-xl hover:bg-brand-50 transition-all"
           >
             Sign In Instead
-          </a>
+          </Link>
         </div>
       </div>
     </div>
