@@ -11,6 +11,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 // Routes that DON'T require authentication
 const PUBLIC_ROUTES = [
+  "/deals",
   "/login",
   "/register",
   "/api/auth/login",

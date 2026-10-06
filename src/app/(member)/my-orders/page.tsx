@@ -147,11 +147,13 @@ export default function MyOrdersPage() {
       )}
 
       {/* ─── TABS ─── */}
-      <div className="flex items-center gap-2 p-1.5 rounded-2xl glass-dark w-fit border border-silver-800/80">
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#121422] w-fit border border-white/[0.08]">
         <button
           onClick={() => setActiveTab("orders")}
           className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-            activeTab === "orders" ? "btn-gold shadow-gold-sm" : "text-silver-400 hover:text-silver-100"
+            activeTab === "orders"
+              ? "bg-amber-400/15 border border-amber-400/40 text-amber-300 shadow-gold-sm"
+              : "text-silver-400 hover:text-silver-100 hover:bg-white/[0.04]"
           }`}
         >
           📋 All Submissions ({submissions.length})
@@ -159,7 +161,9 @@ export default function MyOrdersPage() {
         <button
           onClick={() => setActiveTab("history")}
           className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-            activeTab === "history" ? "btn-gold shadow-gold-sm" : "text-silver-400 hover:text-silver-100"
+            activeTab === "history"
+              ? "bg-amber-400/15 border border-amber-400/40 text-amber-300 shadow-gold-sm"
+              : "text-silver-400 hover:text-silver-100 hover:bg-white/[0.04]"
           }`}
         >
           📊 Deal Timelines
@@ -184,14 +188,15 @@ export default function MyOrdersPage() {
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {["ALL", "PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"].map((s) => {
                   const count = s === "ALL" ? submissions.length : submissions.filter((sub) => sub.status === s).length;
+                  const isActive = filterStatus === s;
                   return (
                     <button
                       key={s}
                       onClick={() => setFilterStatus(s)}
                       className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
-                        filterStatus === s
-                          ? "btn-gold shadow-gold-sm border-gold-400"
-                          : "btn-silver border-silver-800"
+                        isActive
+                          ? "bg-amber-400/15 border-amber-400/50 text-amber-300 shadow-[0_0_15px_rgba(245,166,35,0.15)]"
+                          : "bg-[#121420] border-white/[0.08] text-silver-400 hover:text-silver-200"
                       }`}
                     >
                       {s === "ALL" ? "All Submissions" : s.replace("_", " ")}

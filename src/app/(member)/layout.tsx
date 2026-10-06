@@ -38,7 +38,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="min-h-screen bg-obsidian-deep pb-24 md:pb-16 text-silver-100 relative">
+    <div className="min-h-screen bg-[#08090e] pb-28 md:pb-20 text-silver-100 relative">
       {/* ─── UNIFIED RESPONSIVE NAVBAR ─── */}
       <Navbar user={user} />
 

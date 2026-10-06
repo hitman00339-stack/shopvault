@@ -16,6 +16,7 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
   const [user, setUser] = useState<any>(initialUser || null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [telegramUrl, setTelegramUrl] = useState("https://t.me/ShopVaultOfficial");
 
   useEffect(() => {
     if (!initialUser) {
@@ -26,6 +27,15 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
         })
         .catch(() => {});
     }
+
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.data?.telegramSupportUrl) {
+          setTelegramUrl(data.data.telegramSupportUrl);
+        }
+      })
+      .catch(() => {});
   }, [initialUser]);
 
   const handleLogout = async () => {
@@ -49,13 +59,13 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
   return (
     <>
       {/* ─── DESKTOP & TOP NAVBAR ─── */}
-      <header className="sticky top-0 z-40 bg-obsidian-900/85 backdrop-blur-2xl border-b border-gold-500/15 px-4 sm:px-8 py-3.5 transition-all">
+      <header className="sticky top-0 z-40 bg-[#08090e]/85 backdrop-blur-2xl border-b border-white/[0.08] px-4 sm:px-8 py-3 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <Logo size="md" href="/deals" />
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1.5 glass-dark px-3 py-1.5 rounded-2xl border border-silver-800/80">
+          {/* Center Modern Segmented Dock */}
+          <nav className="hidden md:flex items-center gap-1 bg-[#12141f]/80 backdrop-blur-xl px-2 py-1.5 rounded-2xl border border-white/[0.08] shadow-inner">
             {navLinks.map((link) => {
               const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
               return (
@@ -64,25 +74,39 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                   href={link.href}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
                     isActive
-                      ? "btn-gold"
-                      : "text-silver-400 hover:text-silver-100 hover:bg-white/5"
+                      ? "bg-amber-400/10 text-amber-300 border border-amber-400/25 shadow-[0_0_15px_rgba(245,166,35,0.15)]"
+                      : "text-silver-400 hover:text-silver-100 hover:bg-white/[0.04] border border-transparent"
                   }`}
                 >
-                  <span>{link.icon}</span>
+                  <span className="text-sm">{link.icon}</span>
                   <span>{link.label}</span>
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
                 </Link>
               );
             })}
           </nav>
 
           {/* Right Action / Profile */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Direct Telegram Support Pill */}
+            <a
+              href={telegramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden lg:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/20 transition-all"
+              title="Instant VIP Telegram Support"
+            >
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+              <span>Telegram Support</span>
+            </a>
+
             {user?.role === "ADMIN" && (
               <Link
                 href="/admin"
-                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black bg-gold-500/15 text-gold-400 border border-gold-500/30 hover:bg-gold-500/25 transition-all"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition-all shadow-gold-sm"
               >
-                👑 <span>Admin Panel</span>
+                <span>👑</span>
+                <span>Admin Console</span>
               </Link>
             )}
 
@@ -90,14 +114,14 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl glass-dark hover:border-gold-500/30 border border-silver-800 transition-all text-left"
+                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-[#141624]/90 hover:border-amber-400/40 border border-white/[0.08] transition-all text-left shadow-sm"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center text-obsidian-deep font-black text-xs shadow-gold-sm">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-obsidian-deep font-black text-xs shadow-gold-sm">
                     {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                   </div>
                   <div className="hidden lg:block">
                     <p className="text-xs font-bold text-silver-100 leading-tight max-w-[120px] truncate">{user.name}</p>
-                    <p className="text-[10px] text-gold-500 font-semibold leading-tight">Member</p>
+                    <p className="text-[10px] text-amber-400 font-semibold leading-tight">Verified VIP</p>
                   </div>
                   <span className="text-silver-500 text-xs hidden sm:inline">▾</span>
                 </button>
@@ -106,12 +130,17 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                 {userDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-60 glass-vault rounded-2xl p-2 z-50 border border-gold-500/25 shadow-2xl animate-fade-in-up">
-                      <div className="px-3 py-2.5 border-b border-silver-800/80 mb-1">
-                        <p className="text-xs font-bold text-silver-100">{user.name}</p>
+                    <div className="absolute right-0 mt-2 w-64 glass-vault rounded-2xl p-2 z-50 border border-white/[0.12] shadow-2xl animate-fade-in-up">
+                      <div className="px-3.5 py-3 border-b border-white/[0.08] mb-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-silver-100">{user.name}</p>
+                          <span className="badge-gold px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">
+                            VIP
+                          </span>
+                        </div>
                         <p className="text-[11px] text-silver-400 truncate mt-0.5">{user.email}</p>
                         {user.upiId && (
-                          <div className="mt-1.5 inline-block px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
+                          <div className="mt-2 inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-mono">
                             UPI: {user.upiId}
                           </div>
                         )}
@@ -121,19 +150,29 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                         <Link
                           href="/admin"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gold-400 hover:bg-gold-500/10 transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-400 hover:bg-amber-500/10 transition-colors"
                         >
-                          👑 Admin Panel
+                          👑 Admin Console
                         </Link>
                       )}
 
                       <Link
                         href="/support"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-silver-300 hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-silver-300 hover:bg-white/[0.06] transition-colors"
                       >
                         ⚙️ Profile & UPI Setup
                       </Link>
+
+                      <a
+                        href={telegramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                      >
+                        💬 Telegram Support
+                      </a>
 
                       <button
                         onClick={handleLogout}
@@ -159,7 +198,7 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
             {/* Mobile Hamburger Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2.5 rounded-xl glass-dark border border-silver-800 text-silver-300 hover:text-gold-400 transition-colors"
+              className="md:hidden p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-silver-300 hover:text-amber-400 transition-colors"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? "✕" : "☰"}
@@ -170,28 +209,28 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
 
       {/* ─── MOBILE DRAWER MENU ─── */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden bg-obsidian-deep/95 backdrop-blur-2xl animate-fade-in-up">
+        <div className="fixed inset-0 z-50 md:hidden bg-[#08090e]/95 backdrop-blur-2xl animate-fade-in-up">
           <div className="p-5 flex flex-col h-full">
-            <div className="flex justify-between items-center pb-4 border-b border-silver-800">
+            <div className="flex justify-between items-center pb-4 border-b border-white/[0.08]">
               <Logo size="md" href="/deals" />
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-9 h-9 rounded-xl glass-dark border border-silver-800 text-silver-300 flex items-center justify-center font-bold text-sm"
+                className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] text-silver-300 flex items-center justify-center font-bold text-sm"
               >
                 ✕
               </button>
             </div>
 
             {user && (
-              <div className="my-5 p-4 rounded-2xl glass-vault border border-gold-500/20">
+              <div className="my-5 p-4 rounded-2xl glass-vault border border-amber-400/20">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center text-obsidian-deep font-black text-sm shadow-gold-sm">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-obsidian-deep font-black text-sm shadow-gold-sm">
                     {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                   </div>
                   <div>
                     <p className="text-sm font-bold text-silver-100">{user.name}</p>
                     <p className="text-xs text-silver-400">{user.email}</p>
-                    <p className="text-[10px] text-gold-500 font-bold uppercase mt-0.5">
+                    <p className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
                       {user.role === "ADMIN" ? "Administrator" : "Verified Member"}
                     </p>
                   </div>
@@ -207,8 +246,8 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center justify-between p-4 rounded-2xl text-sm font-bold transition-all ${
                     pathname === link.href
-                      ? "btn-gold shadow-gold-sm"
-                      : "glass-dark border border-silver-800/80 text-silver-200"
+                      ? "bg-amber-400/15 border border-amber-400/40 text-amber-300 shadow-gold-sm"
+                      : "bg-white/[0.03] border border-white/[0.06] text-silver-200"
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -219,11 +258,25 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                 </Link>
               ))}
 
+              <a
+                href={telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-4 rounded-2xl text-sm font-bold bg-cyan-500/15 border border-cyan-500/30 text-cyan-300"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">💬</span>
+                  <span>Telegram Support</span>
+                </div>
+                <span>↗</span>
+              </a>
+
               {user?.role === "ADMIN" && (
                 <Link
                   href="/admin"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between p-4 rounded-2xl text-sm font-bold bg-gold-500/15 border border-gold-500/40 text-gold-400"
+                  className="flex items-center justify-between p-4 rounded-2xl text-sm font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">👑</span>
@@ -234,7 +287,7 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
               )}
             </div>
 
-            <div className="pt-4 border-t border-silver-800 space-y-2">
+            <div className="pt-4 border-t border-white/[0.08] space-y-2">
               {user ? (
                 <button
                   onClick={() => {
@@ -260,8 +313,8 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
         </div>
       )}
 
-      {/* ─── MOBILE BOTTOM BAR (Native App Feel on Phones) ─── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-obsidian-950/90 backdrop-blur-2xl border-t border-gold-500/20 px-3 py-2 safe-area-pb">
+      {/* ─── MOBILE BOTTOM BAR ─── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#08090e]/95 backdrop-blur-2xl border-t border-white/[0.08] px-3 py-2 safe-area-pb">
         <div className="flex items-center justify-around">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
@@ -270,23 +323,33 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                 key={link.href}
                 href={link.href}
                 className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
-                  isActive ? "text-gold-400" : "text-silver-500 hover:text-silver-300"
+                  isActive ? "text-amber-400" : "text-silver-500 hover:text-silver-300"
                 }`}
               >
                 <span className={`text-base transition-transform ${isActive ? "scale-110" : ""}`}>{link.icon}</span>
-                <span className={`text-[10px] font-bold tracking-tight ${isActive ? "text-gold-400" : ""}`}>
+                <span className={`text-[10px] font-bold tracking-tight ${isActive ? "text-amber-400" : ""}`}>
                   {link.label}
                 </span>
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-gold-500 mt-0.5" />}
+                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-0.5" />}
               </Link>
             );
           })}
+
+          <a
+            href={telegramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-silver-500 hover:text-cyan-400 transition-all"
+          >
+            <span className="text-base">💬</span>
+            <span className="text-[10px] font-bold">Help</span>
+          </a>
 
           {user?.role === "ADMIN" && (
             <Link
               href="/admin"
               className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
-                pathname.startsWith("/admin") ? "text-gold-400" : "text-silver-500"
+                pathname.startsWith("/admin") ? "text-amber-400" : "text-silver-500"
               }`}
             >
               <span className="text-base">👑</span>

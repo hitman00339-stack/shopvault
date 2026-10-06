@@ -53,8 +53,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        display: ["'Playfair Display'", "Georgia", "serif"],
-        sans: ["'Inter'", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        display: ["'Plus Jakarta Sans'", "'Inter'", "-apple-system", "sans-serif"],
+        sans: ["'Plus Jakarta Sans'", "'Inter'", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        serif: ["'Playfair Display'", "Georgia", "serif"],
       },
       boxShadow: {
         "gold-sm": "0 2px 10px rgba(245, 166, 35, 0.2)",

@@ -224,50 +224,54 @@ export default function DealDetailPage() {
   const form2Submission = mySubmissions.find((s) => s.formType === "FORM2");
 
   return (
-    <div className="min-h-screen bg-obsidian-deep pb-24 md:pb-16">
+    <div className="min-h-screen bg-[#08090e] pb-28 md:pb-20 text-silver-100">
       <Navbar />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Back Link */}
         <Link
           href="/deals"
-          className="inline-flex items-center gap-2 text-xs font-bold text-silver-400 hover:text-gold-400 mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-bold text-silver-400 hover:text-amber-400 mb-8 transition-colors"
         >
           <span>←</span> <span>Back to All Campaigns</span>
         </Link>
 
-        {/* ─── MAIN HERO CARD (Roomy & Ultra-Professional) ─── */}
-        <div className="card-luxury rounded-3xl p-6 sm:p-10 mb-8">
+        {/* ─── MAIN HERO CARD (Ultra-Aesthetic Luxury Stage) ─── */}
+        <div className="card-luxury rounded-3xl p-6 sm:p-10 mb-8 border border-white/[0.08]">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
             {/* Image Column */}
             <div className="lg:col-span-5 flex flex-col items-center">
-              <div className="w-full aspect-square max-w-[380px] rounded-2xl bg-gradient-to-br from-obsidian-800 to-obsidian-950 border border-silver-800/80 p-6 flex items-center justify-center relative overflow-hidden group shadow-2xl">
+              <div className="w-full aspect-square max-w-[380px] rounded-2xl bg-gradient-to-b from-white/[0.04] to-[#0a0c16] border border-white/[0.08] p-6 flex items-center justify-center relative overflow-hidden group shadow-2xl">
+                <div className="absolute inset-0 bg-radial-at-c from-amber-400/[0.08] via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+
                 {deal.imageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={deal.imageUrl}
                     alt={deal.title}
-                    className="w-full h-full object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-contain filter drop-shadow-2xl transition-transform duration-500 group-hover:scale-105 relative z-10"
                   />
                 ) : (
-                  <span className="text-8xl opacity-30">{platform.icon}</span>
+                  <span className="text-8xl opacity-30 relative z-10">{platform.icon}</span>
                 )}
 
                 {deal.cashbackAmount > 0 && (
-                  <div className="absolute top-4 left-4 badge-gold px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-gold-sm">
-                    + {formatINR(deal.cashbackAmount)} CASH BONUS
+                  <div className="absolute top-4 left-4 z-20 bg-gradient-to-r from-amber-400 to-amber-500 text-obsidian-deep px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1.5">
+                    <span>✨</span>
+                    <span>+ {formatINR(deal.cashbackAmount)} CASH BONUS</span>
                   </div>
                 )}
               </div>
 
               {/* Verified Trust Badges */}
               <div className="grid grid-cols-2 gap-3 w-full max-w-[380px] mt-4">
-                <div className="glass-dark p-3 rounded-xl border border-silver-800/80 text-center">
-                  <p className="text-[10px] text-silver-500 font-bold uppercase">Refund Guarantee</p>
-                  <p className="text-xs font-bold text-emerald-400 mt-0.5">100% Protected</p>
+                <div className="glass-dark p-3 rounded-2xl border border-white/[0.08] text-center">
+                  <p className="text-[10px] text-silver-400 font-bold uppercase">Refund Guarantee</p>
+                  <p className="text-xs font-bold text-emerald-400 mt-0.5">100% Protected ✓</p>
                 </div>
-                <div className="glass-dark p-3 rounded-xl border border-silver-800/80 text-center">
-                  <p className="text-[10px] text-silver-500 font-bold uppercase">Payout Method</p>
-                  <p className="text-xs font-bold text-gold-400 mt-0.5">Direct UPI</p>
+                <div className="glass-dark p-3 rounded-2xl border border-white/[0.08] text-center">
+                  <p className="text-[10px] text-silver-400 font-bold uppercase">Payout Method</p>
+                  <p className="text-xs font-bold text-amber-300 mt-0.5">Direct UPI Transfer</p>
                 </div>
               </div>
             </div>
@@ -292,7 +296,7 @@ export default function DealDetailPage() {
 
                   <span
                     className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider ${
-                      isFull ? "badge-danger" : slotsLeft <= 5 ? "badge-gold animate-pulse" : "badge-success"
+                      isFull ? "badge-danger" : slotsLeft <= 5 ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse" : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                     }`}
                   >
                     {isFull ? "CAMPAIGN FULL" : `⚡ ${slotsLeft} OF ${deal.totalSlots} SLOTS LEFT`}
@@ -303,30 +307,30 @@ export default function DealDetailPage() {
                   {deal.title}
                 </h1>
                 <p className="text-xs sm:text-sm text-silver-400 font-semibold mt-2">
-                  Sold & Verified by: <span className="text-gold-400">{deal.brandName}</span>
+                  Sold & Verified by: <span className="text-amber-400 font-bold">{deal.brandName}</span>
                   {deal.sellerName && <span className="text-silver-500 ml-2">({deal.sellerName})</span>}
                 </p>
               </div>
 
               {/* Price Breakdown Box */}
-              <div className="glass-vault rounded-2xl p-5 border border-gold-500/25">
+              <div className="glass-vault rounded-2xl p-5 border border-white/[0.1] shadow-xl">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center sm:text-left">
                   <div>
-                    <p className="text-[10px] text-silver-500 font-bold uppercase tracking-wider">Order Amount</p>
+                    <p className="text-[10px] text-silver-400 font-bold uppercase tracking-wider">Order On {platform.label}</p>
                     <p className="font-display text-xl sm:text-2xl font-black text-silver-100 mt-0.5">
                       {formatINR(deal.productPrice)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-silver-500 font-bold uppercase tracking-wider">Refund Amount</p>
+                    <p className="text-[10px] text-silver-400 font-bold uppercase tracking-wider">UPI Refund</p>
                     <p className="font-display text-xl sm:text-2xl font-black text-emerald-400 mt-0.5">
                       100% ({formatINR(deal.productPrice)})
                     </p>
                   </div>
-                  <div className="col-span-2 sm:col-span-1 border-t sm:border-t-0 sm:border-l border-silver-800/80 pt-3 sm:pt-0 sm:pl-4">
-                    <p className="text-[10px] text-gold-500 font-bold uppercase tracking-wider">Your Net Cost</p>
-                    <p className="font-display text-2xl font-black text-gold-gradient mt-0.5">
-                      {deal.cashbackAmount > 0 ? `+${formatINR(deal.cashbackAmount)} Profit` : "₹0 (FREE)"}
+                  <div className="col-span-2 sm:col-span-1 border-t sm:border-t-0 sm:border-l border-white/[0.08] pt-3 sm:pt-0 sm:pl-4">
+                    <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Your Final Cost</p>
+                    <p className="font-display text-2xl font-black text-emerald-400 mt-0.5">
+                      ₹0 <span className="text-xs text-amber-300 font-bold">({deal.cashbackAmount > 0 ? `+${formatINR(deal.cashbackAmount)} Profit` : "FREE"})</span>
                     </p>
                   </div>
                 </div>
@@ -334,9 +338,9 @@ export default function DealDetailPage() {
 
               {/* Keyword Search Banner */}
               {deal.searchKeyword && (
-                <div className="p-4 sm:p-5 rounded-2xl bg-gold-500/10 border border-gold-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-400/[0.08] border border-amber-400/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
                   <div>
-                    <p className="text-[10px] text-gold-400 font-black uppercase tracking-wider">
+                    <p className="text-[10px] text-amber-400 font-black uppercase tracking-wider">
                       🔍 Required Search Keyword on {platform.label}:
                     </p>
                     <p className="text-sm sm:text-base font-bold text-silver-100 font-mono mt-0.5">
@@ -345,7 +349,7 @@ export default function DealDetailPage() {
                   </div>
                   <button
                     onClick={() => copyKeyword(deal.searchKeyword!)}
-                    className="btn-silver px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap self-stretch sm:self-auto"
+                    className="btn-silver px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap self-stretch sm:self-auto hover:border-amber-400/40"
                   >
                     {copiedKeyword ? "Copied! ✓" : "Copy Keyword 📋"}
                   </button>
@@ -358,7 +362,7 @@ export default function DealDetailPage() {
                   href={deal.productUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-gold w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-sm font-black uppercase tracking-wider"
+                  className="btn-gold w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-sm font-black uppercase tracking-wider shadow-gold-sm"
                 >
                   <span>🛒 Open & Buy on {platform.label}</span>
                   <span>→</span>
@@ -369,9 +373,9 @@ export default function DealDetailPage() {
         </div>
 
         {/* ─── TABS & SUBMISSION WORKFLOW ─── */}
-        <div className="card-luxury rounded-3xl overflow-hidden border border-silver-800">
+        <div className="card-luxury rounded-3xl overflow-hidden border border-white/[0.08]">
           {/* Tab Navigation */}
-          <div className="flex border-b border-silver-800/80 overflow-x-auto no-scrollbar bg-obsidian-900/60 p-2 gap-2">
+          <div className="flex border-b border-white/[0.08] overflow-x-auto no-scrollbar bg-[#0d0f19]/80 p-2 gap-2">
             {[
               { key: "instructions" as const, label: "📖 How It Works & Rules", badge: null },
               {
@@ -398,8 +402,8 @@ export default function DealDetailPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-2 px-5 py-3.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
                   activeTab === tab.key
-                    ? "btn-gold shadow-gold-sm"
-                    : "text-silver-400 hover:text-silver-100 hover:bg-white/5"
+                    ? "bg-amber-400/15 border border-amber-400/40 text-amber-300 shadow-gold-sm"
+                    : "text-silver-400 hover:text-silver-100 hover:bg-white/[0.04]"
                 }`}
               >
                 <span>{tab.label}</span>
