@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       const cleanEmail = email.toLowerCase().trim();
       const isAdmin =
         cleanEmail.includes("admin") || cleanEmail.includes("hitman");
-      const role = isAdmin ? "ADMIN" : "MEMBER";
+      let role: "ADMIN" | "MEMBER" = isAdmin ? "ADMIN" : "MEMBER";
 
       let userId = "user-" + Date.now();
       let userName = isAdmin ? "Shivansh (Admin)" : cleanEmail.split("@")[0] || "VIP Member";
@@ -211,6 +211,7 @@ export async function POST(request: NextRequest) {
           if (isValid) {
             userId = user.id;
             userName = user.name;
+            if (user.role === "ADMIN") role = "ADMIN";
           }
         }
       } catch (dbError) {

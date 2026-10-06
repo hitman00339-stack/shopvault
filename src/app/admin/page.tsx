@@ -137,9 +137,15 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/auth?action=me");
       const data = await res.json();
-      if (!data.success || data.role !== "ADMIN") { router.push("/login"); return; }
-      setUser(data);
-    } catch { router.push("/login"); }
+      const userObj = data.data || data;
+      if (!data.success || userObj?.role !== "ADMIN") {
+        router.push("/login");
+        return;
+      }
+      setUser(userObj);
+    } catch {
+      router.push("/login");
+    }
   };
 
   const fetchSettings = async () => {

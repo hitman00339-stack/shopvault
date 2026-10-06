@@ -16,9 +16,8 @@ export const prisma =
         : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Always cache singleton to reuse connection in serverless lambdas
+globalForPrisma.prisma = prisma;
 
 // ─── Helper: Safe database connection test ───
 export async function testConnection(): Promise<boolean> {
