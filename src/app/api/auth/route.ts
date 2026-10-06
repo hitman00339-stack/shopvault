@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       });
       setAuthCookie(token);
 
-      return NextResponse.json(
+      const res = NextResponse.json(
         {
           success: true,
           message: "Registration successful",
@@ -172,6 +172,14 @@ export async function POST(request: NextRequest) {
         },
         { status: 201 }
       );
+      res.cookies.set("shopvault_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+      });
+      return res;
     }
 
     // ─── LOGIN ───
@@ -216,7 +224,7 @@ export async function POST(request: NextRequest) {
       });
       setAuthCookie(token);
 
-      return NextResponse.json({
+      const res = NextResponse.json({
         success: true,
         message: "Login successful",
         data: {
@@ -229,6 +237,14 @@ export async function POST(request: NextRequest) {
           token,
         },
       });
+      res.cookies.set("shopvault_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+      });
+      return res;
     }
 
     return NextResponse.json(

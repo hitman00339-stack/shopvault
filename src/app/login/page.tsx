@@ -52,41 +52,8 @@ function LoginForm() {
     await performLogin(email, password);
   };
 
-  const quickDemoLogin = async (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword("vault123");
-    await performLogin(demoEmail, "vault123");
-  };
-
   return (
     <div className="space-y-6">
-      {/* ─── 1-CLICK INSTANT ACCESS (Never get stuck) ─── */}
-      <div className="p-4 rounded-2xl glass-dark border border-gold-500/25 space-y-2.5">
-        <p className="text-[10px] text-gold-400 font-black uppercase tracking-widest text-center">
-          ⚡ 1-Click Instant Access
-        </p>
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => quickDemoLogin("member@shopvault.com")}
-            disabled={loading}
-            className="btn-silver py-2.5 px-3 rounded-xl text-xs font-bold text-center border border-silver-700/80 hover:border-gold-500/40 transition-all flex items-center justify-center gap-1.5"
-          >
-            <span>🛡️</span>
-            <span>Member Mode</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => quickDemoLogin("hitman00339@gmail.com")}
-            disabled={loading}
-            className="btn-outline-gold py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-all flex items-center justify-center gap-1.5"
-          >
-            <span>👑</span>
-            <span>Admin Mode</span>
-          </button>
-        </div>
-      </div>
-
       <form onSubmit={handleLogin} className="space-y-5">
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-gold-400">
@@ -96,7 +63,7 @@ function LoginForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="hitman00339@gmail.com or member@example.com"
+            placeholder="name@example.com"
             className="input-premium w-full px-4 py-3.5 rounded-2xl text-sm font-medium"
             required
           />
