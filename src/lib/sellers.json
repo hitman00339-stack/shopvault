@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Apex Retail Labs",
+    "platform": "FLIPKART",
+    "contact": "partners@apexretail.io",
+    "notes": "Consumer audio and smart gear distributor",
+    "id": "seller-1791309107025",
+    "createdAt": "2026-10-06T17:51:47.025Z"
+  },
+  {
+    "id": "seller-1",
+    "name": "Noise Authorized Store",
+    "platform": "AMAZON",
+    "contact": "seller-support@gonoise.com",
+    "notes": "Official seller for Noise audio and smart wearables",
+    "createdAt": "2026-10-06T17:38:24.863Z"
+  },
+  {
+    "id": "seller-2",
+    "name": "SuperComNet",
+    "platform": "FLIPKART",
+    "contact": "supercom@retail.in",
+    "notes": "Top electronics seller on Flipkart",
+    "createdAt": "2026-10-06T17:38:24.863Z"
+  },
+  {
+    "id": "seller-3",
+    "name": "FlashTech Retail",
+    "platform": "MYNTRA",
+    "contact": "flashtech@myntra-partners.com",
+    "notes": "Fashion apparel partner",
+    "createdAt": "2026-10-06T17:38:24.863Z"
+  },
+  {
+    "id": "seller-4",
+    "name": "Nykaa Beauty Direct",
+    "platform": "NYKAA",
+    "contact": "brands@nykaa.com",
+    "notes": "Direct distributor for skincare and cosmetics",
+    "createdAt": "2026-10-06T17:38:24.863Z"
+  },
+  {
+    "id": "seller-5",
+    "name": "Cloudtail India",
+    "platform": "AMAZON",
+    "contact": "cloudtail@amazon.in",
+    "notes": "Verified enterprise seller",
+    "createdAt": "2026-10-06T17:38:24.863Z"
+  },
+  {
+    "id": "seller-6",
+    "name": "Appario Retail",
+    "platform": "AMAZON",
+    "contact": "appario@amazon.in",
+    "notes": "Consumer electronics partner",
+    "createdAt": "2026-10-06T17:38:24.863Z"
+  }
+]

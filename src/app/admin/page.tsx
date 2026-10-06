@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { formatINR, formatDateTime, formatDate } from "@/lib/utils";
 
@@ -42,7 +43,16 @@ interface UserData {
   _count: { submissions: number; supportTickets: number };
 }
 
-type AdminTab = "dashboard" | "deals" | "forms" | "submissions" | "users" | "export" | "support";
+interface Seller {
+  id: string;
+  name: string;
+  platform: string;
+  contact?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+type AdminTab = "dashboard" | "deals" | "sellers" | "forms" | "submissions" | "users" | "export" | "support";
 
 const FIELD_TYPES = [
   { value: "SHORT_ANSWER", label: "Short Answer" },
@@ -79,6 +89,7 @@ export default function AdminPage() {
 
   const [stats, setStats] = useState<any>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [forms, setForms] = useState<FormTemplate[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
@@ -93,22 +104,45 @@ export default function AdminPage() {
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [dealForm, setDealForm] = useState<any>({});
 
+  // Seller management state
+  const [showSellerModal, setShowSellerModal] = useState(false);
+  const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
+  const [sellerForm, setSellerForm] = useState({ name: "", platform: "AMAZON", contact: "", notes: "" });
+  const [sellerSearch, setSellerSearch] = useState("");
+
   const [subFilter, setSubFilter] = useState("ALL");
   const [exportType, setExportType] = useState("FULL");
   const [exportPlatform, setExportPlatform] = useState("");
+  const [exportSellerName, setExportSellerName] = useState("");
   const [exportDateFrom, setExportDateFrom] = useState("");
   const [exportDateTo, setExportDateTo] = useState("");
 
-  useEffect(() => { checkAuth(); }, []);
-  useEffect(() => { loadTabData(); }, [activeTab]);
+  useEffect(() => {
+    checkAuth();
+    fetchSellers();
+  }, []);
+
+  useEffect(() => {
+    loadTabData();
+  }, [activeTab]);
 
   const checkAuth = async () => {
     try {
       const res = await fetch("/api/auth?action=me");
       const data = await res.json();
-      if (!data.success || data.data?.role !== "ADMIN") { router.push("/login"); return; }
-      setUser(data.data);
+      if (!data.success || data.role !== "ADMIN") { router.push("/login"); return; }
+      setUser(data);
     } catch { router.push("/login"); }
+  };
+
+  const fetchSellers = async () => {
+    try {
+      const res = await fetch("/api/admin?action=sellers");
+      const data = await res.json();
+      if (data.success && data.data) setSellers(data.data);
+    } catch (error) {
+      console.error("Failed to load sellers:", error);
+    }
   };
 
   const loadTabData = async () => {
@@ -122,6 +156,10 @@ export default function AdminPage() {
         const res = await fetch("/api/deals?limit=100");
         const data = await res.json();
         if (data.success) setDeals(data.data);
+        fetchSellers();
+      }
+      if (activeTab === "sellers") {
+        fetchSellers();
       }
       if (activeTab === "forms") {
         const res = await fetch("/api/admin?action=forms");
@@ -140,16 +178,19 @@ export default function AdminPage() {
         const data = await res.json();
         if (data.success) setUsers(data.data);
       }
+      if (activeTab === "export") {
+        fetchSellers();
+      }
     } catch (error) { console.error("Failed to load data:", error); }
   };
 
   const openDealEditor = (deal?: Deal) => {
     if (deal) {
       setEditingDeal(deal);
-      setDealForm({ ...deal });
+      setDealForm({ ...deal, sellerName: deal.sellerName || "" });
     } else {
       setEditingDeal(null);
-      setDealForm({ platform: "AMAZON", productPrice: "", cashbackAmount: "0", totalSlots: "50" });
+      setDealForm({ platform: "AMAZON", productPrice: "", cashbackAmount: "0", totalSlots: "50", sellerName: "" });
     }
     setShowDealEditor(true);
   };
@@ -166,6 +207,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...dealForm,
+          sellerName: dealForm.sellerName?.trim() || null,
           productPrice: parseFloat(dealForm.productPrice),
           cashbackAmount: parseFloat(dealForm.cashbackAmount || "0"),
           totalSlots: parseInt(dealForm.totalSlots || "50"),
@@ -175,10 +217,74 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error); return; }
-      toast.success(editingDeal ? "Deal Updated 🌟" : "Deal Created 🌟");
+      toast.success(editingDeal ? "Campaign Updated 🌟" : "Campaign Launched 🚀");
       setShowDealEditor(false);
       loadTabData();
-    } catch { toast.error("Failed to save deal"); }
+    } catch { toast.error("Failed to save campaign"); }
+  };
+
+  // Seller management handlers
+  const openSellerModal = (seller?: Seller) => {
+    if (seller) {
+      setEditingSeller(seller);
+      setSellerForm({
+        name: seller.name || "",
+        platform: seller.platform || "AMAZON",
+        contact: seller.contact || "",
+        notes: seller.notes || "",
+      });
+    } else {
+      setEditingSeller(null);
+      setSellerForm({ name: "", platform: "AMAZON", contact: "", notes: "" });
+    }
+    setShowSellerModal(true);
+  };
+
+  const saveSeller = async () => {
+    if (!sellerForm.name.trim()) {
+      toast.error("Seller name is required");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin?action=seller", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingSeller?.id,
+          ...sellerForm,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to save seller");
+        return;
+      }
+      toast.success(editingSeller ? "Seller Updated ✨" : "Seller Registered 🏪");
+      setShowSellerModal(false);
+      fetchSellers();
+    } catch {
+      toast.error("Failed to save seller");
+    }
+  };
+
+  const deleteSeller = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this seller?")) return;
+    try {
+      const res = await fetch("/api/admin?action=delete-seller", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Seller Removed 🗑️");
+        fetchSellers();
+      } else {
+        toast.error(data.error || "Failed to remove seller");
+      }
+    } catch {
+      toast.error("Error deleting seller");
+    }
   };
 
   const toggleDealVisibility = async (deal: Deal) => {
@@ -258,31 +364,37 @@ export default function AdminPage() {
     } catch { toast.error("Failed"); }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (overrideSeller?: string) => {
     try {
+      const targetSeller = overrideSeller !== undefined ? overrideSeller : exportSellerName;
       const params = new URLSearchParams({ type: exportType });
       if (exportPlatform) params.set("platform", exportPlatform);
+      if (targetSeller && targetSeller !== "ALL") params.set("sellerName", targetSeller);
       if (exportDateFrom) params.set("dateFrom", exportDateFrom);
       if (exportDateTo) params.set("dateTo", exportDateTo);
 
       const res = await fetch(`/api/admin?action=export&${params}`);
       const data = await res.json();
-      if (!data.success || !data.data?.length) { toast.error("No data found"); return; }
+      if (!data.success || !data.data?.length) { toast.error("No data found for this selection"); return; }
 
       const headers = Object.keys(data.data[0]);
       const csvRows = [headers.join(","), ...data.data.map((row: any) => headers.map((h) => `"${String(row[h] || "").replace(/"/g, '""')}"`).join(","))];
       const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a"); link.href = url;
-      link.download = `ShopVault_Export_${new Date().toISOString().split("T")[0]}.csv`;
+      const safeName = targetSeller && targetSeller !== "ALL"
+        ? `ShopVault_${targetSeller.replace(/[^a-zA-Z0-9]/g, "_")}_Export_${new Date().toISOString().split("T")[0]}.csv`
+        : `ShopVault_Export_${new Date().toISOString().split("T")[0]}.csv`;
+      link.download = safeName;
       link.click();
-      toast.success("Export Downloaded 📥");
+      toast.success(`Export Downloaded: ${data.data.length} records 📥`);
     } catch { toast.error("Export Failed"); }
   };
 
   const navItems: { key: AdminTab; label: string; icon: string; badge?: number }[] = [
     { key: "dashboard", label: "Overview", icon: "📊" },
     { key: "deals", label: "Campaigns", icon: "🏷️", badge: deals.length },
+    { key: "sellers", label: "Sellers", icon: "🏪", badge: sellers.length },
     { key: "forms", label: "Form Builder", icon: "📝" },
     { key: "submissions", label: "Queue", icon: "⚡", badge: submissions.filter((s) => s.status === "PENDING").length },
     { key: "users", label: "Members", icon: "👥", badge: users.length },
@@ -351,7 +463,11 @@ export default function AdminPage() {
               <p className="text-[10px] text-gold-500 font-bold uppercase tracking-widest">Super Admin</p>
             </div>
           </div>
-          <button onClick={async () => { await fetch("/api/auth?action=logout", { method: "POST" }); router.push("/login"); }}
+          <button onClick={async () => {
+            try { await fetch("/api/auth?action=logout", { method: "POST" }); } catch {}
+            document.cookie = "shopvault_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            window.location.href = "/login";
+          }}
             className="w-full py-2.5 rounded-xl border border-silver-800 text-xs font-bold text-silver-400 hover:text-white hover:bg-white/5 transition-all">
             Secure Logout 🔒
           </button>
@@ -370,9 +486,17 @@ export default function AdminPage() {
               {navItems.find((n) => n.key === activeTab)?.icon} {navItems.find((n) => n.key === activeTab)?.label}
             </h2>
           </div>
-          <button onClick={loadTabData} className="btn-silver px-4 py-2 rounded-xl text-xs flex items-center gap-2">
-            <span>⟳</span> <span className="hidden sm:inline">Sync Data</span>
-          </button>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/deals"
+              className="btn-silver px-3.5 py-2 rounded-xl text-xs font-bold hover:text-gold-400 transition-colors flex items-center gap-1.5"
+            >
+              <span>🏷️</span> <span className="hidden sm:inline">Members Portal</span>
+            </Link>
+            <button onClick={loadTabData} className="btn-gold px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+              <span>⟳</span> <span className="hidden sm:inline">Sync Data</span>
+            </button>
+          </div>
         </header>
 
         <div className="p-6 lg:p-10 space-y-8 pb-32">
@@ -460,7 +584,16 @@ export default function AdminPage() {
                         <tr key={deal.id} className="hover:bg-white/5 transition-colors">
                           <td className="p-4 pl-6">
                             <p className="text-silver-100 font-bold max-w-[200px] truncate">{deal.title}</p>
-                            <p className="text-[10px] text-silver-500 mt-0.5">{deal.brandName}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <span className="text-[10px] text-silver-400 font-medium">{deal.brandName}</span>
+                              {deal.sellerName ? (
+                                <span className="text-[9px] font-black tracking-wide text-gold-400 bg-gold-500/10 border border-gold-500/25 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                                  <span>🏪</span> {deal.sellerName}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] text-silver-500 italic">Direct / No Seller</span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-4"><span className="px-2.5 py-1 rounded-md text-[9px] font-black border border-silver-700 bg-silver-900 text-silver-300">{deal.platform}</span></td>
                           <td className="p-4 font-bold text-silver-100">{formatINR(deal.productPrice)}</td>
@@ -503,6 +636,45 @@ export default function AdminPage() {
                       <input value={dealForm.brandName} onChange={(e) => setDealForm((p: any) => ({ ...p, brandName: e.target.value }))} className="input-premium w-full px-4 py-3 rounded-xl text-sm" placeholder="Brand..." /></div>
                   </div>
 
+                  {/* Seller / Merchant Selector */}
+                  <div className="p-4 rounded-2xl bg-black/40 border border-gold-500/25 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-gold-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <span>🏪</span> Assign Authorized Seller / Merchant
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setShowDealEditor(false); openSellerModal(); }}
+                        className="text-[10px] font-black uppercase text-gold-400 hover:text-gold-300 tracking-wider hover:underline"
+                      >
+                        + Register New Seller
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <select
+                        value={dealForm.sellerName || ""}
+                        onChange={(e) => setDealForm((p: any) => ({ ...p, sellerName: e.target.value }))}
+                        className="input-premium w-full px-4 py-3 rounded-xl text-sm appearance-none border-gold-500/40"
+                      >
+                        <option value="" className="bg-obsidian-deep">-- Choose Registered Seller --</option>
+                        {sellers.map((s) => (
+                          <option key={s.id} value={s.name} className="bg-obsidian-deep">
+                            {s.name} ({s.platform})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        value={dealForm.sellerName || ""}
+                        onChange={(e) => setDealForm((p: any) => ({ ...p, sellerName: e.target.value }))}
+                        className="input-premium w-full px-4 py-3 rounded-xl text-sm"
+                        placeholder="Or custom merchant name..."
+                      />
+                    </div>
+                    <p className="text-[10px] text-silver-500">
+                      Linking a seller allows one-click seller-wise CSV export and merchant reconciliation.
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div className="space-y-2"><label className="text-[10px] font-bold text-silver-500 uppercase tracking-widest">Platform</label>
                       <select value={dealForm.platform} onChange={(e) => setDealForm((p: any) => ({ ...p, platform: e.target.value }))} className="input-premium w-full px-4 py-3 rounded-xl text-sm appearance-none">
@@ -538,6 +710,242 @@ export default function AdminPage() {
                 <div className="sticky bottom-0 bg-[#18181B]/95 backdrop-blur-md px-8 py-5 border-t border-silver-800 flex gap-4">
                   <button onClick={() => setShowDealEditor(false)} className="btn-silver flex-1 py-3.5 rounded-xl text-xs">Cancel</button>
                   <button onClick={saveDeal} className="btn-gold flex-[2] py-3.5 rounded-xl text-xs uppercase tracking-widest">Deploy Campaign 🚀</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═════════ SELLERS TAB ═════════ */}
+          {activeTab === "sellers" && (
+            <div className="animate-fade-in-up space-y-6">
+              {/* Header and Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-display font-black text-silver-100 flex items-center gap-2">
+                    <span>🏪</span> Authorized Seller Directory
+                  </h3>
+                  <p className="text-xs text-silver-400 mt-1">
+                    Manage registered store sellers. Deals can be assigned to these merchants, and you can export seller-specific CSVs.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => openSellerModal()}
+                    className="btn-gold px-6 py-3 rounded-xl text-xs font-black tracking-widest uppercase flex items-center gap-2 shadow-[0_0_20px_rgba(245,166,35,0.25)]"
+                  >
+                    <span>+</span> Register New Seller
+                  </button>
+                </div>
+              </div>
+
+              {/* Stat Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="glass-dark p-5 rounded-2xl border border-gold-500/20">
+                  <p className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">Total Sellers</p>
+                  <p className="text-2xl font-black text-gold-400 mt-1">{sellers.length}</p>
+                </div>
+                <div className="glass-dark p-5 rounded-2xl border border-silver-800">
+                  <p className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">Amazon Partners</p>
+                  <p className="text-2xl font-black text-silver-100 mt-1">
+                    {sellers.filter((s) => s.platform === "AMAZON").length}
+                  </p>
+                </div>
+                <div className="glass-dark p-5 rounded-2xl border border-silver-800">
+                  <p className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">Flipkart Partners</p>
+                  <p className="text-2xl font-black text-silver-100 mt-1">
+                    {sellers.filter((s) => s.platform === "FLIPKART").length}
+                  </p>
+                </div>
+                <div className="glass-dark p-5 rounded-2xl border border-silver-800">
+                  <p className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">Fashion & Beauty</p>
+                  <p className="text-2xl font-black text-silver-100 mt-1">
+                    {sellers.filter((s) => ["MYNTRA", "NYKAA", "AJIO"].includes(s.platform)).length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-silver-500 text-sm">🔍</span>
+                  <input
+                    value={sellerSearch}
+                    onChange={(e) => setSellerSearch(e.target.value)}
+                    placeholder="Search sellers by store name, platform, contact, or notes..."
+                    className="input-premium w-full pl-11 pr-4 py-3 rounded-2xl text-xs"
+                  />
+                </div>
+                {sellerSearch && (
+                  <button
+                    onClick={() => setSellerSearch("")}
+                    className="text-xs text-silver-400 hover:text-white px-3 py-2"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Sellers Table */}
+              <div className="glass-dark rounded-3xl overflow-hidden border border-silver-800/80 shadow-2xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-black/40 text-[10px] font-black text-silver-500 uppercase tracking-[0.15em]">
+                        <th className="p-4 pl-6">Seller / Merchant</th>
+                        <th className="p-4">Platform</th>
+                        <th className="p-4">Contact / Email</th>
+                        <th className="p-4">Notes & Scope</th>
+                        <th className="p-4 text-right pr-6">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm font-medium text-silver-300 divide-y divide-silver-800/50">
+                      {sellers
+                        .filter((s) => {
+                          if (!sellerSearch) return true;
+                          const q = sellerSearch.toLowerCase();
+                          return (
+                            s.name.toLowerCase().includes(q) ||
+                            s.platform.toLowerCase().includes(q) ||
+                            (s.contact && s.contact.toLowerCase().includes(q)) ||
+                            (s.notes && s.notes.toLowerCase().includes(q))
+                          );
+                        })
+                        .map((seller) => (
+                          <tr key={seller.id} className="hover:bg-white/5 transition-colors">
+                            <td className="p-4 pl-6">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 font-bold text-sm">
+                                  🏪
+                                </div>
+                                <div>
+                                  <p className="text-silver-100 font-bold tracking-wide">{seller.name}</p>
+                                  <p className="text-[10px] text-silver-500">ID: {seller.id}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <span className="px-2.5 py-1 rounded-md text-[9px] font-black border border-silver-700 bg-silver-900 text-silver-200">
+                                {seller.platform}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <p className="text-xs text-silver-300 font-medium">{seller.contact || "—"}</p>
+                            </td>
+                            <td className="p-4 max-w-[260px]">
+                              <p className="text-xs text-silver-400 truncate" title={seller.notes || ""}>
+                                {seller.notes || "—"}
+                              </p>
+                            </td>
+                            <td className="p-4 pr-6">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleExport(seller.name)}
+                                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-gold-500/10 text-gold-400 border border-gold-500/30 hover:bg-gold-500/20 transition-all flex items-center gap-1"
+                                  title="Export orders & submissions for this seller"
+                                >
+                                  <span>📥</span> Export CSV
+                                </button>
+                                <button
+                                  onClick={() => openSellerModal(seller)}
+                                  className="btn-silver px-3 py-1.5 rounded-lg text-[10px] font-bold"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteSeller(seller.id)}
+                                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Seller Modal */}
+          {showSellerModal && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in-up">
+              <div className="glass-dark rounded-3xl w-full max-w-lg overflow-hidden border border-gold-500/30 shadow-[0_0_50px_rgba(245,166,35,0.2)]">
+                <div className="bg-[#18181B]/95 px-6 py-5 border-b border-silver-800 flex justify-between items-center">
+                  <h3 className="text-lg font-display font-black text-gold-gradient flex items-center gap-2">
+                    <span>🏪</span> {editingSeller ? "Edit Seller Details" : "Register New Seller"}
+                  </h3>
+                  <button onClick={() => setShowSellerModal(false)} className="text-silver-500 hover:text-white">✕</button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">
+                      Seller / Store Name *
+                    </label>
+                    <input
+                      value={sellerForm.name}
+                      onChange={(e) => setSellerForm((p) => ({ ...p, name: e.target.value }))}
+                      className="input-premium w-full px-4 py-3 rounded-xl text-sm font-semibold"
+                      placeholder="e.g. Noise Authorized Store, Cloudtail India..."
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">
+                      Primary Platform
+                    </label>
+                    <select
+                      value={sellerForm.platform}
+                      onChange={(e) => setSellerForm((p) => ({ ...p, platform: e.target.value }))}
+                      className="input-premium w-full px-4 py-3 rounded-xl text-sm appearance-none"
+                    >
+                      {PLATFORMS.map((plat) => (
+                        <option key={plat} value={plat} className="bg-obsidian-deep">{plat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">
+                      Contact Details (Email / Phone / WhatsApp)
+                    </label>
+                    <input
+                      value={sellerForm.contact}
+                      onChange={(e) => setSellerForm((p) => ({ ...p, contact: e.target.value }))}
+                      className="input-premium w-full px-4 py-3 rounded-xl text-sm"
+                      placeholder="seller-support@store.com or +91 9876543210"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">
+                      Internal Notes / Guidelines
+                    </label>
+                    <textarea
+                      value={sellerForm.notes}
+                      onChange={(e) => setSellerForm((p) => ({ ...p, notes: e.target.value }))}
+                      rows={3}
+                      className="input-premium w-full px-4 py-3 rounded-xl text-sm resize-none"
+                      placeholder="Reimbursement cadence, key brand contacts, review guidelines..."
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-[#18181B]/95 px-6 py-4 border-t border-silver-800 flex gap-3">
+                  <button
+                    onClick={() => setShowSellerModal(false)}
+                    className="btn-silver flex-1 py-3 rounded-xl text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveSeller}
+                    className="btn-gold flex-[2] py-3 rounded-xl text-xs font-black uppercase tracking-widest"
+                  >
+                    {editingSeller ? "Update Seller ✨" : "Save Seller 🏪"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -695,20 +1103,178 @@ export default function AdminPage() {
 
           {/* ═════════ EXPORT ═════════ */}
           {activeTab === "export" && (
-            <div className="animate-fade-in-up max-w-xl glass-dark rounded-3xl border border-silver-800/80 p-8 space-y-8">
-              <h3 className="text-2xl font-display font-black text-silver-gradient">Data Export Engine</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { value: "FULL", label: "Global Dump" },
-                  { value: "SELLER_WISE", label: "Platform Specific" },
-                  { value: "DATE_WISE", label: "Date Range" },
-                ].map((t) => (
-                  <button key={t.value} onClick={() => setExportType(t.value)} className={`p-4 rounded-2xl border text-left transition-all ${exportType === t.value ? "border-gold-500 bg-gold-500/10 text-gold-400" : "border-silver-800 bg-black/30 text-silver-500 hover:border-silver-600"}`}>
-                    <p className="text-xs font-black uppercase tracking-widest">{t.label}</p>
-                  </button>
-                ))}
+            <div className="animate-fade-in-up max-w-3xl glass-dark rounded-3xl border border-silver-800/80 p-8 space-y-8 shadow-2xl">
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-xl text-gold-400">
+                    📤
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-display font-black text-silver-gradient">
+                      Enterprise Data Export Center
+                    </h3>
+                    <p className="text-xs text-silver-400 mt-0.5">
+                      Generate verified CSV spreadsheets for merchant settlements, seller audits, and cashback reconciliation.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <button onClick={handleExport} className="btn-gold w-full py-4 rounded-xl text-sm font-black uppercase tracking-widest">Execute Download 📥</button>
+
+              {/* Export Mode Selection */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-silver-400 uppercase tracking-widest">
+                  Export Scope / Mode
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { value: "FULL", label: "Global Dump", desc: "All deals & sellers" },
+                    { value: "SELLER_WISE", label: "Seller-Wise", desc: "Filter by merchant" },
+                    { value: "PLATFORM_WISE", label: "Platform-Wise", desc: "Amazon, Flipkart..." },
+                    { value: "DATE_WISE", label: "Date Range", desc: "Timeline specific" },
+                  ].map((t) => (
+                    <button
+                      key={t.value}
+                      onClick={() => setExportType(t.value)}
+                      className={`p-4 rounded-2xl border text-left transition-all ${
+                        exportType === t.value
+                          ? "border-gold-500 bg-gold-500/10 text-gold-400 shadow-[0_0_20px_rgba(245,166,35,0.15)]"
+                          : "border-silver-800 bg-black/30 text-silver-500 hover:border-silver-700 hover:text-silver-300"
+                      }`}
+                    >
+                      <p className="text-xs font-black uppercase tracking-wider">{t.label}</p>
+                      <p className="text-[10px] text-silver-500 mt-1">{t.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seller Selector Filter */}
+              <div className="p-6 rounded-2xl bg-black/40 border border-silver-800/80 space-y-4">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-gold-400 uppercase tracking-wider flex items-center gap-2">
+                    <span>🏪</span> Select Target Seller / Merchant
+                  </label>
+                  {exportSellerName && (
+                    <button
+                      onClick={() => setExportSellerName("")}
+                      className="text-[10px] text-silver-400 hover:text-white"
+                    >
+                      Reset Filter
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-silver-500 uppercase tracking-widest">
+                      Registered Sellers List
+                    </label>
+                    <select
+                      value={exportSellerName}
+                      onChange={(e) => setExportSellerName(e.target.value)}
+                      className="input-premium w-full px-4 py-3 rounded-xl text-sm appearance-none border-gold-500/40"
+                    >
+                      <option value="" className="bg-obsidian-deep">
+                        -- All Sellers (No Filter) --
+                      </option>
+                      {sellers.map((s) => (
+                        <option key={s.id} value={s.name} className="bg-obsidian-deep">
+                          {s.name} ({s.platform})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-silver-500 uppercase tracking-widest">
+                      Platform Filter
+                    </label>
+                    <select
+                      value={exportPlatform}
+                      onChange={(e) => setExportPlatform(e.target.value)}
+                      className="input-premium w-full px-4 py-3 rounded-xl text-sm appearance-none"
+                    >
+                      <option value="" className="bg-obsidian-deep">All Marketplaces</option>
+                      {PLATFORMS.map((p) => (
+                        <option key={p} value={p} className="bg-obsidian-deep">{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Quick 1-Click Seller Export Chips */}
+                {sellers.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-[10px] font-bold text-silver-500 uppercase tracking-widest mb-2">
+                      ⚡ Quick 1-Click Seller Downloads:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {sellers.slice(0, 6).map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => {
+                            setExportSellerName(s.name);
+                            handleExport(s.name);
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-gold-500/20 text-silver-300 hover:text-gold-300 border border-silver-800 hover:border-gold-500/30 transition-all flex items-center gap-1.5"
+                        >
+                          <span>🏪</span> {s.name}
+                          <span className="text-gold-500 text-[9px]">↓</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Date Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-silver-500 uppercase tracking-widest">
+                    Start Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={exportDateFrom}
+                    onChange={(e) => setExportDateFrom(e.target.value)}
+                    className="input-premium w-full px-4 py-3 rounded-xl text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-silver-500 uppercase tracking-widest">
+                    End Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={exportDateTo}
+                    onChange={(e) => setExportDateTo(e.target.value)}
+                    className="input-premium w-full px-4 py-3 rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Active Export Configuration Summary */}
+              <div className="p-4 rounded-2xl bg-gold-500/5 border border-gold-500/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <p className="text-[10px] font-black text-gold-400 uppercase tracking-widest">Export Scope Summary</p>
+                  <p className="text-xs text-silver-300 mt-0.5">
+                    Target: <span className="font-bold text-white">{exportSellerName || "All Sellers"}</span> | Platform: <span className="font-bold text-white">{exportPlatform || "All Platforms"}</span>
+                  </p>
+                  <p className="text-[10px] text-silver-500 mt-1">
+                    Columns: Submission ID, Order ID, Deal Title, Seller Name, Brand, Platform, Price, Cashback, Member Info, UPI ID, Status, Date
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2">
+                <button
+                  onClick={() => handleExport()}
+                  className="btn-gold w-full py-4 rounded-xl text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(245,166,35,0.3)]"
+                >
+                  <span>📥</span> Download {exportSellerName ? `"${exportSellerName}" Data` : "Report"} (CSV)
+                </button>
+              </div>
             </div>
           )}
 
