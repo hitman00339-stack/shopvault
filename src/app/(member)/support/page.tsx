@@ -34,8 +34,32 @@ export default function SupportPage() {
     queryType: "",
     subject: "",
     description: "",
+    screenshot: "",
   });
   const [submittingTicket, setSubmittingTicket] = useState(false);
+
+  const handleTicketFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file (PNG, JPG, WEBP, etc.)");
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("File size exceeds 8MB limit");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setTicketForm((p) => ({ ...p, screenshot: result }));
+      toast.success("Screenshot attached! 📸");
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Profile state
   const [profile, setProfile] = useState({
@@ -47,9 +71,25 @@ export default function SupportPage() {
   });
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Telegram support settings
+  const [telegramUrl, setTelegramUrl] = useState("https://t.me/ShopVaultOfficial");
+  const [telegramId, setTelegramId] = useState("ShopVaultOfficial");
+
   useEffect(() => {
     fetchProfile();
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data.success && data.data) {
+        setTelegramUrl(data.data.telegramSupportUrl || "https://t.me/ShopVaultOfficial");
+        setTelegramId(data.data.telegramSupportId || "ShopVaultOfficial");
+      }
+    } catch {}
+  };
 
   const fetchProfile = async () => {
     try {
@@ -89,7 +129,7 @@ export default function SupportPage() {
 
     try {
       toast.success("Support ticket logged! Our team will reply shortly. 🎫");
-      setTicketForm({ queryType: "", subject: "", description: "" });
+      setTicketForm({ queryType: "", subject: "", description: "", screenshot: "" });
       setShowNewTicket(false);
     } catch {
       toast.error("Failed to submit ticket");
@@ -150,6 +190,38 @@ export default function SupportPage() {
       {/* ─── SUPPORT TAB ─── */}
       {activeTab === "support" && (
         <div className="space-y-6">
+          {/* Direct Telegram Support Card */}
+          <div className="card-luxury p-6 rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-obsidian-900 via-obsidian-900 to-[#0088cc]/10 shadow-[0_0_30px_rgba(0,136,204,0.15)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#0088cc]/20 border border-[#0088cc]/40 flex items-center justify-center text-2xl text-cyan-400 shrink-0 shadow-[0_0_15px_rgba(0,136,204,0.3)]">
+                ✈️
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display font-black text-base sm:text-lg text-silver-100">
+                    Official Telegram VIP Concierge
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    ACTIVE
+                  </span>
+                </div>
+                <p className="text-xs text-silver-400 mt-1 max-w-xl">
+                  Need immediate help with your order or refund? Chat directly with our verified support team on Telegram:{" "}
+                  <span className="text-gold-400 font-mono font-bold">@{telegramId}</span>
+                </p>
+              </div>
+            </div>
+            <a
+              href={telegramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-gold px-6 py-3.5 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap shadow-gold-sm flex items-center gap-2 self-stretch sm:self-auto justify-center"
+            >
+              <span>Chat on Telegram</span>
+              <span>→</span>
+            </a>
+          </div>
+
           {/* Info Banner */}
           <div className="glass-vault p-5 rounded-2xl border border-gold-500/20 flex items-start gap-4">
             <span className="text-2xl">⚡</span>
@@ -239,6 +311,50 @@ export default function SupportPage() {
                     className="input-premium w-full px-4 py-3.5 rounded-2xl text-sm font-medium resize-none"
                     required
                   />
+                </div>
+
+                {/* Attachment / Screenshot Upload */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gold-400">
+                    Attach Screenshot / Proof (Optional)
+                  </label>
+                  {ticketForm.screenshot ? (
+                    <div className="relative rounded-2xl overflow-hidden border border-gold-500/40 bg-obsidian-deep p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={ticketForm.screenshot}
+                          alt="Attached proof"
+                          className="w-14 h-14 object-cover rounded-xl border border-silver-800"
+                        />
+                        <div>
+                          <p className="text-xs font-bold text-silver-100">Screenshot Attached ✓</p>
+                          <p className="text-[10px] text-emerald-400">Ready to transmit</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTicketForm((p) => ({ ...p, screenshot: "" }))}
+                        className="px-3 py-1.5 rounded-xl glass-dark border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="border-2 border-dashed border-silver-800 hover:border-gold-500/50 rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all bg-obsidian-deep/50 hover:bg-gold-500/5 group text-center">
+                      <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📷</span>
+                      <p className="text-xs font-bold text-silver-200">
+                        Upload Screenshot from Device
+                      </p>
+                      <p className="text-[10px] text-silver-500 mt-0.5">PNG, JPG, WEBP up to 8MB</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleTicketFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
 
                 {/* Buttons */}

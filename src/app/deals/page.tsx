@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import CustomerSupportButton from "@/components/CustomerSupportButton";
 import { formatINR, getPlatformConfig } from "@/lib/utils";
 
 interface Deal {
@@ -285,6 +286,9 @@ export default function DealsPage() {
           </div>
         )}
       </main>
+
+      {/* ─── FLOATING TELEGRAM CUSTOMER SUPPORT ─── */}
+      <CustomerSupportButton />
     </div>
   );
 }

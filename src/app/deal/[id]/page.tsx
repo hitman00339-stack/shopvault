@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import CustomerSupportButton from "@/components/CustomerSupportButton";
 import { formatINR, getPlatformConfig } from "@/lib/utils";
 
 interface FormField {
@@ -107,6 +108,33 @@ export default function DealDetailPage() {
     setCopiedKeyword(true);
     toast.success("Keyword copied to clipboard!");
     setTimeout(() => setCopiedKeyword(false), 2000);
+  };
+
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetForm: "form1" | "form2",
+    fieldKey: string
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("File size must be under 8MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (targetForm === "form1") {
+        setForm1Data((p) => ({ ...p, [fieldKey]: dataUrl }));
+      } else {
+        setForm2Data((p) => ({ ...p, [fieldKey]: dataUrl }));
+      }
+      toast.success("File / Screenshot uploaded! 📸");
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read file");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (formType: "FORM1" | "FORM2") => {
@@ -498,14 +526,55 @@ export default function DealDetailPage() {
                         <label className="text-xs font-bold uppercase tracking-wider text-gold-400">
                           {field.label} {field.isRequired && <span className="text-red-400">*</span>}
                         </label>
-                        <input
-                          type={field.fieldType === "NUMBER" ? "number" : "text"}
-                          placeholder={field.placeholder || `Enter ${field.label}`}
-                          value={form1Data[field.label] || ""}
-                          onChange={(e) => setForm1Data((p) => ({ ...p, [field.label]: e.target.value }))}
-                          className="input-premium w-full px-4 py-3.5 rounded-xl text-sm font-medium"
-                          required={field.isRequired}
-                        />
+                        {field.fieldType === "FILE_UPLOAD" ? (
+                          form1Data[field.label] ? (
+                            <div className="p-3.5 rounded-xl bg-black/40 border border-gold-500/30 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={form1Data[field.label]}
+                                  alt=""
+                                  className="w-12 h-12 object-cover rounded-lg border border-silver-700"
+                                />
+                                <div>
+                                  <p className="text-xs font-bold text-silver-100">File Attached ✓</p>
+                                  <p className="text-[10px] text-emerald-400">Ready for submission</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setForm1Data((p) => ({ ...p, [field.label]: "" }))}
+                                className="text-xs text-red-400 hover:text-red-300 font-bold"
+                              >
+                                ✕ Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-gold-500/30 hover:border-gold-500/60 rounded-xl bg-black/20 hover:bg-gold-500/5 cursor-pointer transition-all">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleFileUpload(e, "form1", field.label)}
+                                className="hidden"
+                              />
+                              <span className="text-xl">📁</span>
+                              <span className="text-xs font-bold text-silver-200 mt-1">
+                                Click to Upload {field.label}
+                              </span>
+                              <span className="text-[10px] text-silver-500">
+                                Upload image directly from your device (Max 8MB)
+                              </span>
+                            </label>
+                          )
+                        ) : (
+                          <input
+                            type={field.fieldType === "NUMBER" ? "number" : "text"}
+                            placeholder={field.placeholder || `Enter ${field.label}`}
+                            value={form1Data[field.label] || ""}
+                            onChange={(e) => setForm1Data((p) => ({ ...p, [field.label]: e.target.value }))}
+                            className="input-premium w-full px-4 py-3.5 rounded-xl text-sm font-medium"
+                            required={field.isRequired}
+                          />
+                        )}
                         {field.helpText && <p className="text-[11px] text-silver-500">{field.helpText}</p>}
                       </div>
                     ))}
@@ -564,7 +633,7 @@ export default function DealDetailPage() {
                     Step 2: Submit Review Proof
                   </h3>
                   <p className="text-silver-400 text-xs sm:text-sm mt-1">
-                    Provide your live review link or screenshot URL after your 5-star rating is approved.
+                    Upload your 5-star rating screenshot proof directly after your review is posted.
                   </p>
                 </div>
 
@@ -587,14 +656,55 @@ export default function DealDetailPage() {
                         <label className="text-xs font-bold uppercase tracking-wider text-gold-400">
                           {field.label} {field.isRequired && <span className="text-red-400">*</span>}
                         </label>
-                        <input
-                          type="text"
-                          placeholder={field.placeholder || `Enter ${field.label}`}
-                          value={form2Data[field.label] || ""}
-                          onChange={(e) => setForm2Data((p) => ({ ...p, [field.label]: e.target.value }))}
-                          className="input-premium w-full px-4 py-3.5 rounded-xl text-sm font-medium"
-                          required={field.isRequired}
-                        />
+                        {field.fieldType === "FILE_UPLOAD" ? (
+                          form2Data[field.label] ? (
+                            <div className="p-3.5 rounded-xl bg-black/40 border border-gold-500/30 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={form2Data[field.label]}
+                                  alt=""
+                                  className="w-12 h-12 object-cover rounded-lg border border-silver-700"
+                                />
+                                <div>
+                                  <p className="text-xs font-bold text-silver-100">Screenshot Attached ✓</p>
+                                  <p className="text-[10px] text-emerald-400">Ready to submit</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setForm2Data((p) => ({ ...p, [field.label]: "" }))}
+                                className="text-xs text-red-400 hover:text-red-300 font-bold"
+                              >
+                                ✕ Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-gold-500/30 hover:border-gold-500/60 rounded-xl bg-black/20 hover:bg-gold-500/5 cursor-pointer transition-all">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleFileUpload(e, "form2", field.label)}
+                                className="hidden"
+                              />
+                              <span className="text-xl">📸</span>
+                              <span className="text-xs font-bold text-silver-200 mt-1">
+                                Click to Upload {field.label}
+                              </span>
+                              <span className="text-[10px] text-silver-500">
+                                Direct image upload from device
+                              </span>
+                            </label>
+                          )
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder={field.placeholder || `Enter ${field.label}`}
+                            value={form2Data[field.label] || ""}
+                            onChange={(e) => setForm2Data((p) => ({ ...p, [field.label]: e.target.value }))}
+                            className="input-premium w-full px-4 py-3.5 rounded-xl text-sm font-medium"
+                            required={field.isRequired}
+                          />
+                        )}
                         {field.helpText && <p className="text-[11px] text-silver-500">{field.helpText}</p>}
                       </div>
                     ))}
@@ -621,18 +731,58 @@ export default function DealDetailPage() {
                         className="input-premium w-full px-4 py-3.5 rounded-xl text-sm font-medium"
                       />
                     </div>
+
+                    {/* Direct Image File Upload for Review Screenshot */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold uppercase tracking-wider text-gold-400">
-                        Review Screenshot Link / Image URL *
+                        Review Screenshot Proof (Upload Image) *
                       </label>
-                      <input
-                        type="url"
-                        placeholder="https://drive.google.com/... or https://imgur.com/..."
-                        value={form2Data["Screenshot URL"] || ""}
-                        onChange={(e) => setForm2Data((p) => ({ ...p, "Screenshot URL": e.target.value }))}
-                        className="input-premium w-full px-4 py-3.5 rounded-xl text-sm font-medium"
-                      />
+                      {form2Data["Screenshot URL"] ? (
+                        <div className="p-3.5 rounded-2xl bg-black/40 border border-gold-500/30 flex items-center justify-between">
+                          <div className="flex items-center gap-3.5">
+                            <img
+                              src={form2Data["Screenshot URL"]}
+                              alt="Review Proof"
+                              className="w-14 h-14 object-cover rounded-xl border border-silver-700 bg-obsidian-deep"
+                            />
+                            <div>
+                              <p className="text-xs font-bold text-silver-100 flex items-center gap-1">
+                                <span className="text-emerald-400">✓</span> Review Proof Attached
+                              </p>
+                              <p className="text-[10px] text-silver-400 mt-0.5">
+                                Direct image upload from device
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setForm2Data((p) => ({ ...p, "Screenshot URL": "" }))}
+                            className="text-xs text-red-400 hover:text-red-300 font-bold hover:underline px-2"
+                          >
+                            ✕ Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="group flex flex-col items-center justify-center p-6 border-2 border-dashed border-gold-500/30 hover:border-gold-500/60 rounded-2xl bg-black/20 hover:bg-gold-500/5 cursor-pointer transition-all">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileUpload(e, "form2", "Screenshot URL")}
+                            className="hidden"
+                          />
+                          <div className="w-12 h-12 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-2xl text-gold-400 group-hover:scale-110 transition-transform">
+                            📸
+                          </div>
+                          <span className="text-xs font-bold text-silver-200 mt-2">
+                            Click to Select Review Screenshot
+                          </span>
+                          <span className="text-[10px] text-silver-500 mt-0.5">
+                            Upload directly from your gallery/device — No image URL needed
+                          </span>
+                        </label>
+                      )}
                     </div>
+
                     <button
                       onClick={() => handleSubmit("FORM2")}
                       disabled={submitting}
@@ -647,6 +797,9 @@ export default function DealDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* ─── FLOATING TELEGRAM CUSTOMER SUPPORT ─── */}
+      <CustomerSupportButton />
     </div>
   );
 }

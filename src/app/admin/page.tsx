@@ -110,6 +110,12 @@ export default function AdminPage() {
   const [sellerForm, setSellerForm] = useState({ name: "", platform: "AMAZON", contact: "", notes: "" });
   const [sellerSearch, setSellerSearch] = useState("");
 
+  // Telegram support settings state
+  const [telegramSupportId, setTelegramSupportId] = useState("ShopVaultOfficial");
+  const [telegramSupportUrl, setTelegramSupportUrl] = useState("https://t.me/ShopVaultOfficial");
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [imageUploadLoading, setImageUploadLoading] = useState(false);
+
   const [subFilter, setSubFilter] = useState("ALL");
   const [exportType, setExportType] = useState("FULL");
   const [exportPlatform, setExportPlatform] = useState("");
@@ -120,6 +126,7 @@ export default function AdminPage() {
   useEffect(() => {
     checkAuth();
     fetchSellers();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
@@ -133,6 +140,68 @@ export default function AdminPage() {
       if (!data.success || data.role !== "ADMIN") { router.push("/login"); return; }
       setUser(data);
     } catch { router.push("/login"); }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data.success && data.data) {
+        setTelegramSupportId(data.data.telegramSupportId || "ShopVaultOfficial");
+        setTelegramSupportUrl(data.data.telegramSupportUrl || "https://t.me/ShopVaultOfficial");
+      }
+    } catch (e) {
+      console.error("Failed to load settings:", e);
+    }
+  };
+
+  const saveTelegramSupport = async () => {
+    if (!telegramSupportId.trim()) {
+      toast.error("Please enter a Telegram handle/ID");
+      return;
+    }
+    setSavingSettings(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telegramSupportId: telegramSupportId.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update Telegram settings");
+        return;
+      }
+      setTelegramSupportId(data.data.telegramSupportId);
+      setTelegramSupportUrl(data.data.telegramSupportUrl);
+      toast.success("Telegram Support ID Updated & Active Across Site! ✈️");
+    } catch {
+      toast.error("Failed to save Telegram settings");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleDealImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Image file should be under 8MB");
+      return;
+    }
+    setImageUploadLoading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setDealForm((p: any) => ({ ...p, imageUrl: result }));
+      setImageUploadLoading(false);
+      toast.success("Product image uploaded! 📸");
+    };
+    reader.onerror = () => {
+      setImageUploadLoading(false);
+      toast.error("Failed to read image file");
+    };
+    reader.readAsDataURL(file);
   };
 
   const fetchSellers = async () => {
@@ -690,8 +759,58 @@ export default function AdminPage() {
                   <div className="space-y-2"><label className="text-[10px] font-bold text-silver-500 uppercase tracking-widest">Product URL</label>
                     <input value={dealForm.productUrl} onChange={(e) => setDealForm((p: any) => ({ ...p, productUrl: e.target.value }))} className="input-premium w-full px-4 py-3 rounded-xl text-sm" placeholder="https://" /></div>
                   
-                  <div className="space-y-2"><label className="text-[10px] font-bold text-silver-500 uppercase tracking-widest">Image URL</label>
-                    <input value={dealForm.imageUrl} onChange={(e) => setDealForm((p: any) => ({ ...p, imageUrl: e.target.value }))} className="input-premium w-full px-4 py-3 rounded-xl text-sm" placeholder="https://" /></div>
+                  {/* Direct Product Image Upload (No URL Required) */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-silver-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <span>📸</span> Product Image (Upload File)
+                      </label>
+                      {dealForm.imageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDealForm((p: any) => ({ ...p, imageUrl: "" }))}
+                          className="text-[10px] text-red-400 hover:text-red-300 font-bold hover:underline"
+                        >
+                          ✕ Remove Image
+                        </button>
+                      )}
+                    </div>
+
+                    {dealForm.imageUrl ? (
+                      <div className="p-4 rounded-2xl bg-black/40 border border-gold-500/30 flex items-center gap-4">
+                        <img
+                          src={dealForm.imageUrl}
+                          alt="Product Preview"
+                          className="w-20 h-20 object-contain rounded-xl bg-obsidian-deep border border-silver-800 p-1 shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-silver-100 flex items-center gap-1.5">
+                            <span className="text-emerald-400">✓</span> Image Attached
+                          </p>
+                          <p className="text-[10px] text-silver-500 mt-0.5 truncate">
+                            {dealForm.imageUrl.startsWith("data:") ? "Direct device upload (Base64)" : dealForm.imageUrl}
+                          </p>
+                          <label className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gold-400 border border-gold-500/30 cursor-pointer transition-all">
+                            <span>🔄</span> Change Image
+                            <input type="file" accept="image/*" onChange={handleDealImageUpload} className="hidden" />
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="group relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-gold-500/30 hover:border-gold-500/70 rounded-2xl bg-black/30 hover:bg-gold-500/5 cursor-pointer transition-all">
+                        <input type="file" accept="image/*" onChange={handleDealImageUpload} className="hidden" />
+                        <div className="w-12 h-12 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-2xl text-gold-400 group-hover:scale-110 transition-transform">
+                          📁
+                        </div>
+                        <p className="text-xs font-bold text-silver-200 mt-2">
+                          {imageUploadLoading ? "Reading Image..." : "Click or Drag to Upload Product Image"}
+                        </p>
+                        <p className="text-[10px] text-silver-500 mt-0.5">
+                          Upload directly from your device (PNG, JPG, WEBP) — No image URL needed
+                        </p>
+                      </label>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2"><label className="text-[10px] font-bold text-silver-500 uppercase tracking-widest">Step 1 Form</label>
@@ -1274,6 +1393,139 @@ export default function AdminPage() {
                 >
                   <span>📥</span> Download {exportSellerName ? `"${exportSellerName}" Data` : "Report"} (CSV)
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* ═════════ CUSTOMER SUPPORT & TELEGRAM CENTER ═════════ */}
+          {activeTab === "support" && (
+            <div className="animate-fade-in-up max-w-4xl space-y-8">
+              {/* Header */}
+              <div>
+                <h3 className="text-2xl font-display font-black text-silver-gradient flex items-center gap-3">
+                  <span>✈️</span> Customer Support & Telegram Command Center
+                </h3>
+                <p className="text-xs text-silver-400 mt-1">
+                  Configure the official Telegram support channel. Changes here immediately update the floating support button, member portal, and mobile concierge.
+                </p>
+              </div>
+
+              {/* Telegram Channel Configuration Card */}
+              <div className="glass-dark rounded-3xl border border-cyan-500/30 p-8 space-y-6 shadow-[0_0_40px_rgba(0,136,204,0.15)] relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#0088cc]/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-silver-800/80 pb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0088cc] to-[#29b6f6] flex items-center justify-center text-white text-3xl shadow-[0_0_20px_rgba(0,136,204,0.4)]">
+                      ✈️
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-silver-100 flex items-center gap-2">
+                        Official Telegram Support Handle
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          LIVE & ACTIVE
+                        </span>
+                      </h4>
+                      <p className="text-xs text-silver-400 mt-0.5">
+                        Current Live URL:{" "}
+                        <a
+                          href={telegramSupportUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-400 font-mono hover:underline font-bold"
+                        >
+                          {telegramSupportUrl}
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+
+                  <a
+                    href={telegramSupportUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-silver px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto hover:text-cyan-300"
+                  >
+                    <span>↗</span> Test Live Chat Link
+                  </a>
+                </div>
+
+                {/* Edit Telegram Handle Form */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-gold-400 uppercase tracking-widest flex items-center gap-2">
+                      <span>✏️</span> Set Telegram Username / ID / Channel Link
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-400 font-mono font-bold text-sm">
+                        @
+                      </span>
+                      <input
+                        value={telegramSupportId}
+                        onChange={(e) => setTelegramSupportId(e.target.value)}
+                        placeholder="e.g. ShopVaultSupport or hitman00339"
+                        className="input-premium w-full pl-9 pr-4 py-3.5 rounded-xl text-sm font-mono font-bold text-white border-cyan-500/40 focus:border-cyan-400"
+                      />
+                    </div>
+                    <p className="text-[11px] text-silver-500">
+                      You can enter a Telegram username (e.g. <code className="text-silver-300">@ShopVaultSupport</code>) or a direct Telegram link. The system automatically formats it into an instant chat link.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button
+                      onClick={saveTelegramSupport}
+                      disabled={savingSettings}
+                      className="btn-gold px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,166,35,0.3)] flex-1"
+                    >
+                      <span>💾</span> {savingSettings ? "Updating..." : "Save & Update Telegram Support"}
+                    </button>
+                    <a
+                      href={telegramSupportUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-3.5 rounded-xl text-xs font-bold bg-[#0088cc]/20 text-cyan-300 border border-[#0088cc]/40 hover:bg-[#0088cc]/30 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>✈️</span> Verify Telegram Link
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Overview Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="glass-dark p-6 rounded-2xl border border-silver-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">⚡</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+                  <h5 className="font-bold text-silver-100 text-sm mt-3">Floating Widget</h5>
+                  <p className="text-[11px] text-silver-400 mt-1">
+                    Active on all member catalog & deal pages. Users can click to message your Telegram directly.
+                  </p>
+                </div>
+
+                <div className="glass-dark p-6 rounded-2xl border border-silver-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">🛡️</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
+                  </div>
+                  <h5 className="font-bold text-silver-100 text-sm mt-3">Member Desk</h5>
+                  <p className="text-[11px] text-silver-400 mt-1">
+                    Featured prominently on <code className="text-silver-300">/support</code> for members seeking 1-on-1 VIP order assistance.
+                  </p>
+                </div>
+
+                <div className="glass-dark p-6 rounded-2xl border border-silver-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">📱</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-gold-400" />
+                  </div>
+                  <h5 className="font-bold text-silver-100 text-sm mt-3">Mobile Friendly</h5>
+                  <p className="text-[11px] text-silver-400 mt-1">
+                    Deep-links directly to the Telegram app on iOS and Android devices for friction-free chat.
+                  </p>
+                </div>
               </div>
             </div>
           )}

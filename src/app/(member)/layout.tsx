@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import CustomerSupportButton from "@/components/CustomerSupportButton";
 
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="min-h-screen bg-obsidian-deep pb-24 md:pb-16 text-silver-100">
+    <div className="min-h-screen bg-obsidian-deep pb-24 md:pb-16 text-silver-100 relative">
       {/* ─── UNIFIED RESPONSIVE NAVBAR ─── */}
       <Navbar user={user} />
 
@@ -45,6 +46,9 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {children}
       </main>
+
+      {/* ─── FLOATING TELEGRAM CUSTOMER SUPPORT ─── */}
+      <CustomerSupportButton />
     </div>
   );
 }
