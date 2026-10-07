@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/db";
+import prisma, { withTimeout } from "@/lib/db";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
 
 const SAMPLE_DEALS = [
@@ -73,6 +73,13 @@ const SAMPLE_DEALS = [
   },
 ];
 
+// ─── In-Memory Cache for Public Deals List (30s TTL) ───
+let cachedPublicDeals: { data: any; expiresAt: number; key: string } | null = null;
+
+function invalidateDealsCache() {
+  cachedPublicDeals = null;
+}
+
 // ─── GET: List deals (public for members, full for admin) ───
 export async function GET(request: NextRequest) {
   try {
@@ -86,6 +93,17 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
+
+    // Cache check for public deals listing (fast response < 5ms)
+    const isPublicList = !id && (!user || user.role !== "ADMIN");
+    const cacheKey = `${platform || "ALL"}_${search || ""}_${page}_${limit}`;
+    if (isPublicList && cachedPublicDeals && cachedPublicDeals.key === cacheKey && Date.now() < cachedPublicDeals.expiresAt) {
+      return NextResponse.json(cachedPublicDeals.data, {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=59",
+        },
+      });
+    }
 
     // Build where clause
     const where: any = {};
@@ -102,7 +120,7 @@ export async function GET(request: NextRequest) {
         if (status) where.status = status;
       }
 
-      if (platform) where.platform = platform;
+      if (platform && platform !== "ALL") where.platform = platform;
       if (search) {
         where.OR = [
           { title: { contains: search, mode: "insensitive" } },
@@ -111,24 +129,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [deals, total] = await Promise.all([
-      prisma.deal.findMany({
-        where,
-        include: {
-          form1: {
-            include: { fields: { orderBy: { sortOrder: "asc" } } },
+    // Lean include: Form blueprints are only needed when viewing a single deal's details
+    const queryOptions: any = {
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      include: id
+        ? {
+            form1: { include: { fields: { orderBy: { sortOrder: "asc" } } } },
+            form2: { include: { fields: { orderBy: { sortOrder: "asc" } } } },
+            _count: { select: { submissions: true } },
+          }
+        : {
+            _count: { select: { submissions: true } },
           },
-          form2: {
-            include: { fields: { orderBy: { sortOrder: "asc" } } },
-          },
-          _count: { select: { submissions: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.deal.count({ where }),
-    ]);
+    };
+
+    const dealsPromise = prisma.deal.findMany(queryOptions);
+
+    const deals = await withTimeout(dealsPromise, [], 1800);
 
     let finalDeals = deals;
     if (finalDeals.length === 0) {
@@ -137,7 +157,7 @@ export async function GET(request: NextRequest) {
       if (platform && platform !== "ALL") finalDeals = finalDeals.filter((d: any) => d.platform === platform);
     }
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       data: finalDeals,
       pagination: {
@@ -145,6 +165,20 @@ export async function GET(request: NextRequest) {
         limit,
         total: finalDeals.length,
         totalPages: 1,
+      },
+    };
+
+    if (isPublicList) {
+      cachedPublicDeals = {
+        key: cacheKey,
+        data: responsePayload,
+        expiresAt: Date.now() + 30 * 1000,
+      };
+    }
+
+    return NextResponse.json(responsePayload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=59",
       },
     });
   } catch (error) {
@@ -228,11 +262,13 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      invalidateDealsCache();
       return NextResponse.json(
         { success: true, data: deal, message: "Deal created successfully" },
         { status: 201 }
       );
     } catch (dbErr) {
+      invalidateDealsCache();
       console.warn("DB not connected, using in-memory mock deal create:", dbErr);
       const mockDeal: any = {
         id: "deal-" + Date.now(),
@@ -326,12 +362,14 @@ export async function PUT(request: NextRequest) {
         },
       });
 
+      invalidateDealsCache();
       return NextResponse.json({
         success: true,
         data: deal,
         message: "Deal updated successfully",
       });
     } catch (dbErr) {
+      invalidateDealsCache();
       console.warn("DB not connected, using mock deal update:", dbErr);
       const matchIndex = (SAMPLE_DEALS as any[]).findIndex((d) => d.id === id);
       if (matchIndex >= 0) {
@@ -385,6 +423,7 @@ export async function DELETE(request: NextRequest) {
       where: { id },
       data: { isVisible: false, status: "EXPIRED" },
     });
+    invalidateDealsCache();
 
     return NextResponse.json({
       success: true,

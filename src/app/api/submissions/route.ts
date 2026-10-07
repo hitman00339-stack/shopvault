@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/db";
+import prisma, { withTimeout } from "@/lib/db";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
 
 // ─── In-Memory Submissions Fallback (When DB is offline / in dev mode) ───
@@ -117,39 +117,51 @@ export async function GET(request: NextRequest) {
 
       if (formType) where.formType = formType;
 
-      const [submissions, total] = await Promise.all([
-        prisma.submission.findMany({
-          where,
-          include: {
-            user: {
-              select: { id: true, name: true, email: true, phone: true, upiId: true },
-            },
-            deal: {
-              select: {
-                id: true, title: true, brandName: true,
-                platform: true, productPrice: true, cashbackAmount: true,
+      const fetchSubsPromise = async () => {
+        return Promise.all([
+          prisma.submission.findMany({
+            where,
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, phone: true, upiId: true },
+              },
+              deal: {
+                select: {
+                  id: true, title: true, brandName: true,
+                  platform: true, productPrice: true, cashbackAmount: true,
+                },
+              },
+              formData: {
+                orderBy: { createdAt: "asc" },
               },
             },
-            formData: {
-              orderBy: { createdAt: "asc" },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.submission.count({ where }),
-      ]);
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+          }),
+          prisma.submission.count({ where }),
+        ]);
+      };
+
+      const result = await withTimeout<any>(fetchSubsPromise(), null, 2500);
+      if (!result) throw new Error("DB submissions query timeout");
+
+      const [submissions, total] = result;
 
       if (submissions.length > 0) {
         let memberStats = null;
         if (user.role !== "ADMIN") {
-          const allUserSubmissions = await prisma.submission.findMany({
-            where: { userId: user.userId },
-            include: {
-              deal: { select: { productPrice: true, cashbackAmount: true } },
-            },
-          });
+          const allUserSubmissions = await withTimeout<any[]>(
+            prisma.submission.findMany({
+              where: { userId: user.userId },
+              select: {
+                status: true,
+                deal: { select: { productPrice: true, cashbackAmount: true } },
+              },
+            }),
+            [],
+            1500
+          );
 
           const totalSpent = allUserSubmissions
             .filter((s) => s.status === "APPROVED" || s.status === "PENDING" || s.status === "UNDER_REVIEW")

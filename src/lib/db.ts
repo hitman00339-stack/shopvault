@@ -31,4 +31,24 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
+// ─── Helper: Fast Timeout Wrapper (Prevents Serverless Hangs on Cold DB) ───
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  fallback: T,
+  timeoutMs: number = 2000
+): Promise<T> {
+  let timer: any;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), timeoutMs);
+  });
+  try {
+    const res = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timer);
+    return res;
+  } catch {
+    clearTimeout(timer);
+    return fallback;
+  }
+}
+
 export default prisma;

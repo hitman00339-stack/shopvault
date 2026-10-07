@@ -124,27 +124,34 @@ export default function AdminPage() {
   const [exportDateTo, setExportDateTo] = useState("");
 
   useEffect(() => {
-    checkAuth();
-    fetchSellers();
-    fetchSettings();
+    checkAuth().then((isAuthed) => {
+      if (isAuthed) {
+        fetchSettings();
+        fetchSellers();
+      }
+    });
   }, []);
 
   useEffect(() => {
-    loadTabData();
-  }, [activeTab]);
+    if (user) {
+      loadTabData();
+    }
+  }, [activeTab, user]);
 
-  const checkAuth = async () => {
+  const checkAuth = async (): Promise<boolean> => {
     try {
       const res = await fetch("/api/auth?action=me");
       const data = await res.json();
       const userObj = data.data || data;
       if (!data.success || userObj?.role !== "ADMIN") {
         router.push("/login");
-        return;
+        return false;
       }
       setUser(userObj);
+      return true;
     } catch {
       router.push("/login");
+      return false;
     }
   };
 

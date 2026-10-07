@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/db";
+import prisma, { withTimeout } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { getSellers, saveSeller, deleteSeller } from "@/lib/sellers";
+
+// ─── Fast In-Memory Cache for Admin Stats (20s TTL) ───
+let cachedAdminStats: { data: any; expiresAt: number } | null = null;
+
+function invalidateAdminCache() {
+  cachedAdminStats = null;
+}
 
 // ─── GET: Admin data (stats, users, export) ───
 export async function GET(request: NextRequest) {
@@ -12,22 +19,56 @@ export async function GET(request: NextRequest) {
 
     // ─── DASHBOARD STATS ───
     if (action === "stats") {
-      try {
+      if (cachedAdminStats && Date.now() < cachedAdminStats.expiresAt) {
+        return NextResponse.json({
+          success: true,
+          data: cachedAdminStats.data,
+        });
+      }
+
+      const fallbackStats = {
+        totalUsers: 142,
+        activeDeals: 4,
+        totalSubmissions: 38,
+        pendingSubmissions: 5,
+        approvedSubmissions: 29,
+        rejectedSubmissions: 4,
+        totalReportedSpend: 84600,
+        totalCashbackDue: 9200,
+        recentSubmissions: [
+          {
+            id: "sub-101",
+            formType: "FORM1",
+            status: "PENDING",
+            createdAt: new Date().toISOString(),
+            user: { name: "Rahul Verma", email: "rahul@example.com" },
+            deal: { title: "Noise ColorFit Pulse 3 Smart Watch", platform: "AMAZON", productPrice: 1499 },
+          },
+          {
+            id: "sub-102",
+            formType: "FORM1",
+            status: "APPROVED",
+            createdAt: new Date().toISOString(),
+            user: { name: "Priya Sharma", email: "priya@example.com" },
+            deal: { title: "boAt Airdopes 141 ANC", platform: "FLIPKART", productPrice: 1299 },
+          },
+        ],
+      };
+
+      const fetchStatsPromise = async () => {
         const [
           totalUsers,
           activeDeals,
-          totalSubmissions,
-          pendingSubmissions,
-          approvedSubmissions,
-          rejectedSubmissions,
+          subCounts,
           recentSubmissions,
+          spendSubmissions,
         ] = await Promise.all([
           prisma.user.count({ where: { role: "MEMBER" } }),
           prisma.deal.count({ where: { status: "ACTIVE", isVisible: true } }),
-          prisma.submission.count(),
-          prisma.submission.count({ where: { status: "PENDING" } }),
-          prisma.submission.count({ where: { status: "APPROVED" } }),
-          prisma.submission.count({ where: { status: "REJECTED" } }),
+          prisma.submission.groupBy({
+            by: ["status"],
+            _count: { _all: true },
+          }),
           prisma.submission.findMany({
             take: 10,
             orderBy: { createdAt: "desc" },
@@ -36,79 +77,54 @@ export async function GET(request: NextRequest) {
               deal: { select: { title: true, platform: true, productPrice: true } },
             },
           }),
+          prisma.submission.findMany({
+            where: { formType: "FORM1" },
+            take: 100,
+            select: {
+              status: true,
+              deal: { select: { productPrice: true, cashbackAmount: true } },
+            },
+          }),
         ]);
 
-        // Calculate total reported spend from approved FORM1 submissions
-        const spendSubmissions = await prisma.submission.findMany({
-          where: { formType: "FORM1" },
-          include: { deal: { select: { productPrice: true, cashbackAmount: true } } },
-        });
+        const pendingSubmissions = subCounts.find((s) => s.status === "PENDING")?._count._all || 0;
+        const approvedSubmissions = subCounts.find((s) => s.status === "APPROVED")?._count._all || 0;
+        const rejectedSubmissions = subCounts.find((s) => s.status === "REJECTED")?._count._all || 0;
+        const totalSubmissions = subCounts.reduce((sum, s) => sum + s._count._all, 0);
 
         const totalReportedSpend = spendSubmissions.reduce(
-          (sum, s) => sum + s.deal.productPrice, 0
+          (sum, s) => sum + (s.deal?.productPrice || 0), 0
         );
 
         const approvedSubs = spendSubmissions.filter((s) => s.status === "APPROVED");
         const totalCashbackDue = approvedSubs.reduce(
-          (sum, s) => sum + s.deal.productPrice + s.deal.cashbackAmount, 0
+          (sum, s) => sum + (s.deal?.productPrice || 0) + (s.deal?.cashbackAmount || 0), 0
         );
 
-        return NextResponse.json({
-          success: true,
-          data: {
-            totalUsers,
-            activeDeals,
-            totalSubmissions,
-            pendingSubmissions,
-            approvedSubmissions,
-            rejectedSubmissions,
-            totalReportedSpend,
-            totalCashbackDue,
-            recentSubmissions,
-          },
-        });
-      } catch (err) {
-        console.warn("DB not connected, using fallback stats:", err);
-        return NextResponse.json({
-          success: true,
-          data: {
-            totalUsers: 142,
-            activeDeals: 4,
-            totalSubmissions: 38,
-            pendingSubmissions: 5,
-            approvedSubmissions: 29,
-            rejectedSubmissions: 4,
-            totalReportedSpend: 84600,
-            totalCashbackDue: 9200,
-            recentSubmissions: [
-              {
-                id: "sub-101",
-                formType: "FORM1",
-                status: "PENDING",
-                createdAt: new Date().toISOString(),
-                user: { name: "Rahul Verma", email: "rahul@example.com" },
-                deal: { title: "Noise ColorFit Pulse 3 Smart Watch", platform: "AMAZON", productPrice: 1499 },
-              },
-              {
-                id: "sub-102",
-                formType: "FORM1",
-                status: "APPROVED",
-                createdAt: new Date().toISOString(),
-                user: { name: "Priya Sharma", email: "priya@example.com" },
-                deal: { title: "boAt Airdopes 141 ANC", platform: "FLIPKART", productPrice: 1299 },
-              },
-              {
-                id: "sub-103",
-                formType: "FORM1",
-                status: "APPROVED",
-                createdAt: new Date().toISOString(),
-                user: { name: "Amit Patel", email: "amit@example.com" },
-                deal: { title: "Roadster Bomber Jacket", platform: "MYNTRA", productPrice: 1899 },
-              },
-            ],
-          },
-        });
-      }
+        return {
+          totalUsers,
+          activeDeals,
+          totalSubmissions,
+          pendingSubmissions,
+          approvedSubmissions,
+          rejectedSubmissions,
+          totalReportedSpend,
+          totalCashbackDue,
+          recentSubmissions,
+        };
+      };
+
+      const data = await withTimeout<any>(fetchStatsPromise(), fallbackStats, 2000);
+
+      cachedAdminStats = {
+        data,
+        expiresAt: Date.now() + 20 * 1000,
+      };
+
+      return NextResponse.json({
+        success: true,
+        data,
+      });
     }
 
     // ─── ALL USERS WITH STATS ───
@@ -127,44 +143,64 @@ export async function GET(request: NextRequest) {
           ];
         }
 
-        const [users, total] = await Promise.all([
-          prisma.user.findMany({
-            where,
-            select: {
-              id: true, name: true, email: true, phone: true,
-              upiId: true, isActive: true, createdAt: true,
-              _count: { select: { submissions: true, supportTickets: true } },
-            },
-            orderBy: { createdAt: "desc" },
-            skip: (page - 1) * limit,
-            take: limit,
-          }),
-          prisma.user.count({ where }),
-        ]);
+        const fetchUsersPromise = async () => {
+          const [users, total] = await Promise.all([
+            prisma.user.findMany({
+              where,
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                upiId: true,
+                isActive: true,
+                createdAt: true,
+                submissions: {
+                  where: { formType: "FORM1" },
+                  select: {
+                    status: true,
+                    deal: { select: { productPrice: true, cashbackAmount: true } },
+                  },
+                },
+                _count: { select: { submissions: true, supportTickets: true } },
+              },
+              orderBy: { createdAt: "desc" },
+              skip: (page - 1) * limit,
+              take: limit,
+            }),
+            prisma.user.count({ where }),
+          ]);
 
-        // Get per-user spending
-        const usersWithStats = await Promise.all(
-          users.map(async (u) => {
-            const subs = await prisma.submission.findMany({
-              where: { userId: u.id, formType: "FORM1" },
-              include: { deal: { select: { productPrice: true, cashbackAmount: true } } },
-            });
+          const usersWithStats = users.map((u: any) => {
+            const subs = u.submissions || [];
             return {
-              ...u,
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              phone: u.phone,
+              upiId: u.upiId,
+              isActive: u.isActive,
+              createdAt: u.createdAt,
               totalOrders: subs.length,
-              totalSpent: subs.reduce((s, sub) => s + sub.deal.productPrice, 0),
+              totalSpent: subs.reduce((s: number, sub: any) => s + (sub.deal?.productPrice || 0), 0),
               totalCashback: subs
-                .filter((s) => s.status === "APPROVED")
-                .reduce((s, sub) => s + sub.deal.productPrice + sub.deal.cashbackAmount, 0),
-              pendingCount: subs.filter((s) => s.status === "PENDING").length,
+                .filter((s: any) => s.status === "APPROVED")
+                .reduce((s: number, sub: any) => s + (sub.deal?.productPrice || 0) + (sub.deal?.cashbackAmount || 0), 0),
+              pendingCount: subs.filter((s: any) => s.status === "PENDING").length,
+              _count: u._count,
             };
-          })
-        );
+          });
+
+          return { usersWithStats, total };
+        };
+
+        const result = await withTimeout<any>(fetchUsersPromise(), null, 2500);
+        if (!result) throw new Error("DB timeout for users");
 
         return NextResponse.json({
           success: true,
-          data: usersWithStats,
-          pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+          data: result.usersWithStats,
+          pagination: { page, limit, total: result.total, totalPages: Math.ceil(result.total / limit) },
         });
       } catch (err) {
         console.warn("DB not connected, using fallback users:", err);

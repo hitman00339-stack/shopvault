@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/db";
+import prisma, { withTimeout } from "@/lib/db";
 import {
   hashPassword,
   verifyPassword,
@@ -37,47 +37,49 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    try {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: user.userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          role: true,
-          upiId: true,
-          isActive: true,
-          createdAt: true,
-        },
-      });
-
-      if (dbUser) {
-        return NextResponse.json({ success: true, data: dbUser });
-      }
-    } catch (dbError) {
-      console.warn("DB lookup fallback:", dbError);
-    }
-
-    // Fallback if DB is unavailable but JWT is valid
     const displayName = user.email.includes("hitman")
       ? "Shivansh"
       : user.email.includes("admin")
       ? "Admin"
       : user.email.split("@")[0] || "ShopVault VIP";
 
+    const fallbackUser = {
+      id: user.userId,
+      name: displayName,
+      email: user.email,
+      phone: "9876543210",
+      role: user.role,
+      upiId: "vault@upi",
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    let dbUser = null;
+    try {
+      dbUser = await withTimeout(
+        prisma.user.findUnique({
+          where: { id: user.userId },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+            upiId: true,
+            isActive: true,
+            createdAt: true,
+          },
+        }),
+        null,
+        1500
+      );
+    } catch (e) {
+      // fallback
+    }
+
     return NextResponse.json({
       success: true,
-      data: {
-        id: user.userId,
-        name: displayName,
-        email: user.email,
-        phone: "9876543210",
-        role: user.role,
-        upiId: "vault@upi",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-      },
+      data: dbUser || fallbackUser,
     });
   } catch (error) {
     return NextResponse.json(
