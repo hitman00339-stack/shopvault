@@ -143,91 +143,73 @@ export async function GET(request: NextRequest) {
         ]);
       };
 
-      const result = await withTimeout<any>(fetchSubsPromise(), null, 2500);
-      if (!result) throw new Error("DB submissions query timeout");
+      const result = await withTimeout<any>(fetchSubsPromise(), null, 8000);
+      const [submissions, total] = result || [[], 0];
 
-      const [submissions, total] = result;
+      let memberStats = null;
+      if (user.role !== "ADMIN") {
+        const allUserSubmissions = await withTimeout<any[]>(
+          prisma.submission.findMany({
+            where: { userId: user.userId },
+            select: {
+              status: true,
+              deal: { select: { productPrice: true, cashbackAmount: true } },
+            },
+          }),
+          [],
+          4000
+        );
 
-      if (submissions.length > 0) {
-        let memberStats = null;
-        if (user.role !== "ADMIN") {
-          const allUserSubmissions = await withTimeout<any[]>(
-            prisma.submission.findMany({
-              where: { userId: user.userId },
-              select: {
-                status: true,
-                deal: { select: { productPrice: true, cashbackAmount: true } },
-              },
-            }),
-            [],
-            1500
-          );
+        const totalSpent = allUserSubmissions
+          .filter((s) => s.status === "APPROVED" || s.status === "PENDING" || s.status === "UNDER_REVIEW")
+          .reduce((sum, s) => sum + (s.deal?.productPrice || 0), 0);
 
-          const totalSpent = allUserSubmissions
-            .filter((s) => s.status === "APPROVED" || s.status === "PENDING" || s.status === "UNDER_REVIEW")
-            .reduce((sum, s) => sum + s.deal.productPrice, 0);
+        const totalCashback = allUserSubmissions
+          .filter((s) => s.status === "APPROVED")
+          .reduce((sum, s) => sum + (s.deal?.productPrice || 0) + (s.deal?.cashbackAmount || 0), 0);
 
-          const totalCashback = allUserSubmissions
-            .filter((s) => s.status === "APPROVED")
-            .reduce((sum, s) => sum + s.deal.productPrice + s.deal.cashbackAmount, 0);
-
-          memberStats = {
-            totalSubmissions: allUserSubmissions.length,
-            pending: allUserSubmissions.filter((s) => s.status === "PENDING").length,
-            approved: allUserSubmissions.filter((s) => s.status === "APPROVED").length,
-            rejected: allUserSubmissions.filter((s) => s.status === "REJECTED").length,
-            totalSpent,
-            totalCashback,
-          };
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: submissions,
-          memberStats,
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-          },
-        });
+        memberStats = {
+          totalSubmissions: allUserSubmissions.length,
+          pending: allUserSubmissions.filter((s) => s.status === "PENDING").length,
+          approved: allUserSubmissions.filter((s) => s.status === "APPROVED").length,
+          rejected: allUserSubmissions.filter((s) => s.status === "REJECTED").length,
+          totalSpent,
+          totalCashback,
+        };
       }
+
+      return NextResponse.json({
+        success: true,
+        data: submissions,
+        memberStats,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+      });
     } catch (dbErr) {
-      console.warn("Submissions DB fallback:", dbErr);
+      console.warn("Submissions DB query error:", dbErr);
+      return NextResponse.json({
+        success: true,
+        data: [],
+        memberStats: {
+          totalSubmissions: 0,
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+          totalSpent: 0,
+          totalCashback: 0,
+        },
+        pagination: {
+          page: 1,
+          limit,
+          total: 0,
+          totalPages: 1,
+        },
+      });
     }
-
-    // ─── Offline / Dev Mode Fallback ───
-    let fallback = [...MOCK_SUBMISSIONS];
-    if (dealId) fallback = fallback.filter((s) => s.dealId === dealId);
-    if (formType) fallback = fallback.filter((s) => s.formType === formType);
-    if (status && status !== "ALL") fallback = fallback.filter((s) => s.status === status);
-
-    const totalSpent = fallback.reduce((sum, s) => sum + (s.deal?.productPrice || 0), 0);
-    const totalCashback = fallback
-      .filter((s) => s.status === "APPROVED")
-      .reduce((sum, s) => sum + ((s.deal?.productPrice || 0) + (s.deal?.cashbackAmount || 0)), 0);
-
-    const memberStats = {
-      totalSubmissions: fallback.length,
-      pending: fallback.filter((s) => s.status === "PENDING").length,
-      approved: fallback.filter((s) => s.status === "APPROVED").length,
-      rejected: fallback.filter((s) => s.status === "REJECTED").length,
-      totalSpent,
-      totalCashback,
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: fallback,
-      memberStats,
-      pagination: {
-        page: 1,
-        limit,
-        total: fallback.length,
-        totalPages: 1,
-      },
-    });
   } catch (error) {
     console.error("Submissions GET error:", error);
     return NextResponse.json(

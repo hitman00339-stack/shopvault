@@ -5,6 +5,14 @@ import { Toaster } from "react-hot-toast";
 export const metadata: Metadata = {
   title: "ShopVault — Premium Review Deals Portal",
   description: "100% refund + bonus cashback on Amazon, Flipkart, Myntra deals. Verified campaigns, instant payouts.",
+  icons: {
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -26,33 +26,16 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      const fallbackStats = {
-        totalUsers: 142,
-        activeDeals: 4,
-        totalSubmissions: 38,
-        pendingSubmissions: 5,
-        approvedSubmissions: 29,
-        rejectedSubmissions: 4,
-        totalReportedSpend: 84600,
-        totalCashbackDue: 9200,
-        recentSubmissions: [
-          {
-            id: "sub-101",
-            formType: "FORM1",
-            status: "PENDING",
-            createdAt: new Date().toISOString(),
-            user: { name: "Rahul Verma", email: "rahul@example.com" },
-            deal: { title: "Noise ColorFit Pulse 3 Smart Watch", platform: "AMAZON", productPrice: 1499 },
-          },
-          {
-            id: "sub-102",
-            formType: "FORM1",
-            status: "APPROVED",
-            createdAt: new Date().toISOString(),
-            user: { name: "Priya Sharma", email: "priya@example.com" },
-            deal: { title: "boAt Airdopes 141 ANC", platform: "FLIPKART", productPrice: 1299 },
-          },
-        ],
+      const emptyStats = {
+        totalUsers: 0,
+        activeDeals: 0,
+        totalSubmissions: 0,
+        pendingSubmissions: 0,
+        approvedSubmissions: 0,
+        rejectedSubmissions: 0,
+        totalReportedSpend: 0,
+        totalCashbackDue: 0,
+        recentSubmissions: [],
       };
 
       const fetchStatsPromise = async () => {
@@ -114,7 +97,7 @@ export async function GET(request: NextRequest) {
         };
       };
 
-      const data = await withTimeout<any>(fetchStatsPromise(), fallbackStats, 2000);
+      const data = await withTimeout<any>(fetchStatsPromise(), emptyStats, 8000);
 
       cachedAdminStats = {
         data,
@@ -194,8 +177,14 @@ export async function GET(request: NextRequest) {
           return { usersWithStats, total };
         };
 
-        const result = await withTimeout<any>(fetchUsersPromise(), null, 2500);
-        if (!result) throw new Error("DB timeout for users");
+        const result = await withTimeout<any>(fetchUsersPromise(), null, 8000);
+        if (!result) {
+          return NextResponse.json({
+            success: true,
+            data: [],
+            pagination: { page, limit, total: 0, totalPages: 1 },
+          });
+        }
 
         return NextResponse.json({
           success: true,
@@ -203,55 +192,11 @@ export async function GET(request: NextRequest) {
           pagination: { page, limit, total: result.total, totalPages: Math.ceil(result.total / limit) },
         });
       } catch (err) {
-        console.warn("DB not connected, using fallback users:", err);
-        const sampleUsers = [
-          {
-            id: "user-1",
-            name: "Rahul Verma",
-            email: "rahul@example.com",
-            phone: "+91 9876543210",
-            upiId: "rahul@okhdfcbank",
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            totalOrders: 3,
-            totalSpent: 4297,
-            totalCashback: 450,
-            pendingCount: 1,
-            _count: { submissions: 3, supportTickets: 0 },
-          },
-          {
-            id: "user-2",
-            name: "Priya Sharma",
-            email: "priya@example.com",
-            phone: "+91 9811223344",
-            upiId: "priya@okaxis",
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            totalOrders: 5,
-            totalSpent: 8750,
-            totalCashback: 920,
-            pendingCount: 0,
-            _count: { submissions: 5, supportTickets: 1 },
-          },
-          {
-            id: "user-3",
-            name: "Amit Patel",
-            email: "amit@example.com",
-            phone: "+91 9988776655",
-            upiId: "amit@ybl",
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            totalOrders: 2,
-            totalSpent: 3198,
-            totalCashback: 350,
-            pendingCount: 0,
-            _count: { submissions: 2, supportTickets: 0 },
-          },
-        ];
+        console.warn("DB error fetching users:", err);
         return NextResponse.json({
           success: true,
-          data: sampleUsers,
-          pagination: { page: 1, limit: 20, total: 3, totalPages: 1 },
+          data: [],
+          pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
         });
       }
     }
@@ -387,91 +332,11 @@ export async function GET(request: NextRequest) {
           message: `${exportData.length} records exported`,
         });
       } catch (dbError) {
-        console.warn("DB export fallback:", dbError);
-        // Fallback sample export data with seller support
-        const sampleExport = [
-          {
-            "Submission ID": "sub-101",
-            "Member Name": "Rahul Sharma",
-            "Member Email": "rahul@example.com",
-            "Member Phone": "9876543210",
-            "UPI ID": "rahul@okhdfcbank",
-            "Deal Title": "Noise ColorFit Pulse 3 Bluetooth Calling Smart Watch",
-            "Brand": "Noise",
-            "Seller Name": "Noise Authorized Store",
-            "Platform": "AMAZON",
-            "Product Price (₹)": 1499,
-            "Cashback (₹)": 150,
-            "Status": "APPROVED",
-            "Form Type": "FORM1",
-            "Amazon Order ID": "402-8823124-9128374",
-            "Submitted At": new Date().toISOString(),
-          },
-          {
-            "Submission ID": "sub-102",
-            "Member Name": "Priya Patel",
-            "Member Email": "priya@example.com",
-            "Member Phone": "9876501234",
-            "UPI ID": "priya@paytm",
-            "Deal Title": "boAt Airdopes 141 ANC True Wireless In-Ear Earbuds",
-            "Brand": "boAt",
-            "Seller Name": "SuperComNet",
-            "Platform": "FLIPKART",
-            "Product Price (₹)": 1299,
-            "Cashback (₹)": 100,
-            "Status": "PENDING",
-            "Form Type": "FORM1",
-            "Flipkart Order ID": "OD328918239012",
-            "Submitted At": new Date().toISOString(),
-          },
-          {
-            "Submission ID": "sub-103",
-            "Member Name": "Amit Verma",
-            "Member Email": "amit@example.com",
-            "Member Phone": "9811223344",
-            "UPI ID": "amit@ybl",
-            "Deal Title": "Roadster Men Solid Bomber Jacket",
-            "Brand": "Roadster",
-            "Seller Name": "FlashTech Retail",
-            "Platform": "MYNTRA",
-            "Product Price (₹)": 1899,
-            "Cashback (₹)": 200,
-            "Status": "APPROVED",
-            "Form Type": "FORM1",
-            "Order ID": "MYN-9988112",
-            "Submitted At": new Date().toISOString(),
-          },
-          {
-            "Submission ID": "sub-104",
-            "Member Name": "Sneha Roy",
-            "Member Email": "sneha@example.com",
-            "Member Phone": "9845098450",
-            "UPI ID": "sneha@oksbi",
-            "Deal Title": "Minimalist 10% Vitamin C Face Serum",
-            "Brand": "Minimalist",
-            "Seller Name": "Nykaa Beauty Direct",
-            "Platform": "NYKAA",
-            "Product Price (₹)": 699,
-            "Cashback (₹)": 50,
-            "Status": "UNDER_REVIEW",
-            "Form Type": "FORM1",
-            "Order Reference": "NYK-77123",
-            "Submitted At": new Date().toISOString(),
-          },
-        ];
-
-        let filtered = sampleExport;
-        if (sellerName && sellerName !== "ALL") {
-          filtered = filtered.filter((row) => row["Seller Name"]?.toLowerCase() === sellerName.toLowerCase());
-        }
-        if (sellerPlatform && sellerPlatform !== "ALL") {
-          filtered = filtered.filter((row) => row["Platform"]?.toUpperCase() === sellerPlatform.toUpperCase());
-        }
-
+        console.warn("DB export error:", dbError);
         return NextResponse.json({
           success: true,
-          data: filtered,
-          message: `${filtered.length} records exported`,
+          data: [],
+          message: "0 records exported",
         });
       }
     }

@@ -35,7 +35,7 @@ export async function testConnection(): Promise<boolean> {
 export async function withTimeout<T>(
   promise: Promise<T>,
   fallback: T,
-  timeoutMs: number = 2000
+  timeoutMs: number = 6000
 ): Promise<T> {
   let timer: any;
   const timeoutPromise = new Promise<T>((resolve) => {

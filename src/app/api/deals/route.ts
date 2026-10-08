@@ -148,14 +148,9 @@ export async function GET(request: NextRequest) {
 
     const dealsPromise = prisma.deal.findMany(queryOptions);
 
-    const deals = await withTimeout(dealsPromise, [], 1800);
+    const deals = await withTimeout(dealsPromise, [], 8000);
 
     let finalDeals = deals;
-    if (finalDeals.length === 0) {
-      finalDeals = SAMPLE_DEALS as any;
-      if (id) finalDeals = finalDeals.filter((d: any) => d.id === id);
-      if (platform && platform !== "ALL") finalDeals = finalDeals.filter((d: any) => d.platform === platform);
-    }
 
     const responsePayload = {
       success: true,
@@ -182,21 +177,14 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.warn("Deals DB fallback active:", error);
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    const platform = searchParams.get("platform");
-    let fallbackDeals = SAMPLE_DEALS;
-    if (id) fallbackDeals = fallbackDeals.filter((d) => d.id === id);
-    if (platform && platform !== "ALL") fallbackDeals = fallbackDeals.filter((d) => d.platform === platform);
-
+    console.warn("Deals DB error:", error);
     return NextResponse.json({
       success: true,
-      data: fallbackDeals,
+      data: [],
       pagination: {
         page: 1,
         limit: 20,
-        total: fallbackDeals.length,
+        total: 0,
         totalPages: 1,
       },
     });
